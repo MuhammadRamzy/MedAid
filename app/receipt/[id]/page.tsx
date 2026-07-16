@@ -114,6 +114,31 @@ Thank you for your cooperation!`;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-area, .print-area * {
+            visibility: visible;
+          }
+          .print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 12px !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          @page {
+            margin: 0;
+            size: auto;
+          }
+        }
+      `}} />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-4 print:hidden">
         <Link
           href="/"
@@ -158,12 +183,12 @@ Thank you for your cooperation!`;
         <div className="print-area w-full max-w-[340px] border border-border bg-white p-5 text-black font-mono text-[11px] leading-relaxed shadow-md">
           {/* Header */}
           <div className="text-center space-y-1">
-            <div className="relative mx-auto h-12 w-12 overflow-hidden rounded-full mb-1">
+            <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full mb-2">
               <Image
                 src="/logo.png"
                 alt="KMCC Logo"
                 fill
-                sizes="48px"
+                sizes="80px"
                 className="object-cover grayscale"
               />
             </div>
