@@ -43,40 +43,55 @@ const DB_PATH = IS_VERCEL
   ? path.join("/tmp", "db.json")
   : path.join(process.cwd(), "data", "db.json");
 
+// In-Memory database cache
+let dbCache: Database | null = null;
+// Promise queue to serialize writing and avoid file locking/corruption
+let writeQueue: Promise<void> = Promise.resolve();
+
 function readDb(): Database {
+  if (dbCache) {
+    return dbCache;
+  }
   try {
     if (!fs.existsSync(DB_PATH)) {
       // Ensure the directory exists
       fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
       fs.writeFileSync(DB_PATH, JSON.stringify(initialDbData, null, 2), "utf8");
-      return initialDbData as unknown as Database;
+      dbCache = initialDbData as unknown as Database;
+      return dbCache;
     }
     const data = fs.readFileSync(DB_PATH, "utf8");
-    return JSON.parse(data) as Database;
+    dbCache = JSON.parse(data) as Database;
+    return dbCache;
   } catch (error) {
     console.error("Failed to read database:", error);
     return initialDbData as unknown as Database;
   }
 }
 
-function writeDb(db: Database): boolean {
-  try {
-    // Ensure directory exists
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf8");
-    return true;
-  } catch (error) {
-    console.error("Failed to write database:", error);
-    return false;
-  }
+async function writeDbAsync(db: Database): Promise<boolean> {
+  // Always update the in-memory cache instantly
+  dbCache = db;
+
+  // Queue filesystem write promise to prevent overlapping operations
+  return new Promise((resolve) => {
+    writeQueue = writeQueue.then(async () => {
+      try {
+        await fs.promises.mkdir(path.dirname(DB_PATH), { recursive: true });
+        await fs.promises.writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+        resolve(true);
+      } catch (error) {
+        console.error("Failed to write database asynchronously:", error);
+        resolve(false);
+      }
+    });
+  });
 }
 
 export const dbService = {
   // --- ITEMS ---
   async getItems(): Promise<Item[]> {
     const db = readDb();
-    // Update overdue status dynamically for allocations, which might affect items?
-    // Not directly, but we can verify status.
     return db.items;
   },
 
@@ -92,7 +107,7 @@ export const dbService = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     };
     db.items.push(newItem);
-    writeDb(db);
+    await writeDbAsync(db);
     return newItem;
   },
 
@@ -102,7 +117,7 @@ export const dbService = {
     if (index === -1) return null;
     
     db.items[index] = { ...db.items[index], ...updates };
-    writeDb(db);
+    await writeDbAsync(db);
     return db.items[index];
   },
 
@@ -114,7 +129,7 @@ export const dbService = {
     db.items.splice(index, 1);
     // Also clean up any active allocations referencing this item
     db.allocations = db.allocations.filter((a) => a.itemId !== id);
-    writeDb(db);
+    await writeDbAsync(db);
     return true;
   },
 
@@ -141,7 +156,7 @@ export const dbService = {
       id: `ben-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     };
     db.beneficiaries.push(newBen);
-    writeDb(db);
+    await writeDbAsync(db);
     return newBen;
   },
 
@@ -209,7 +224,7 @@ export const dbService = {
     }
 
     db.allocations.push(newAlloc);
-    writeDb(db);
+    await writeDbAsync(db);
     return newAlloc;
   },
 
@@ -244,7 +259,7 @@ export const dbService = {
       db.items[itemIndex].currentAllocationId = null;
     }
 
-    writeDb(db);
+    await writeDbAsync(db);
     return alloc;
   },
 };

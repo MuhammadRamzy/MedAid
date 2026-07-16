@@ -1,4 +1,4 @@
-const CACHE_NAME = "kmcc-inventory-cache-v1";
+const CACHE_NAME = "kmcc-inventory-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
@@ -35,32 +35,45 @@ self.addEventListener("fetch", (event) => {
   // Only cache GET requests
   if (event.request.method !== "GET") return;
 
-  // Skip API routes or dev websocket connections
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api") || url.pathname.startsWith("/_next")) {
+  // Skip dynamic API routes, hot-reload updates, and next internal files in online mode
+  if (
+    url.pathname.startsWith("/api") || 
+    url.pathname.startsWith("/_next") || 
+    url.pathname.includes("hot-update")
+  ) {
     return;
   }
 
+  // Network-First with cache fallback strategy
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request)
-        .then((response) => {
-          if (!response || response.status !== 200 || response.type !== "basic") {
-            return response;
-          }
+    fetch(event.request)
+      .then((response) => {
+        // If response is valid, update the cache copy
+        if (response && response.status === 200 && response.type === "basic") {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
-          return response;
-        })
-        .catch(() => {
-          // Return cached response if offline fetch fails
-          return caches.match("/");
+        }
+        return response;
+      })
+      .catch(() => {
+        // Network failed (offline), check cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback to offline index for page navigation
+          if (event.request.mode === "navigate") {
+            return caches.match("/");
+          }
+          return new Response("Offline - Connection failed", {
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: new Headers({ "Content-Type": "text/plain" }),
+          });
         });
-    })
+      })
   );
 });

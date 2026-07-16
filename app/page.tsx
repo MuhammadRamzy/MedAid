@@ -318,11 +318,11 @@ export default function PosDashboard() {
       {mounted && portalTarget && cart.length > 0 && createPortal(
         <button
           onClick={() => setIsCartOpen(true)}
-          className="flex items-center space-x-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all active:scale-95"
+          className="relative flex items-center justify-center h-10 w-10 sm:w-auto sm:h-auto sm:space-x-2 rounded-full sm:rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md transition-all active:scale-95 sm:px-3.5 sm:py-2"
         >
-          <ShoppingCart className="h-4 w-4" />
-          <span>Cart</span>
-          <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white text-[10px] font-black text-teal-800">
+          <ShoppingCart className="h-5 w-5 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline text-xs sm:text-sm font-bold">Cart</span>
+          <span className="absolute -top-1 -right-1 sm:static flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shadow-sm border-2 border-teal-600 sm:border-0 sm:bg-white sm:text-teal-800">
             {cart.length}
           </span>
         </button>,

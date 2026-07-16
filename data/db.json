@@ -23,18 +23,18 @@
       "assetTag": "KMCC-MOB-003",
       "name": "Standard Wheelchair (Foldable) - Unit C",
       "category": "Mobility",
-      "status": "AVAILABLE",
+      "status": "ALLOCATED",
       "conditionOnCheckIn": "Fair",
-      "currentAllocationId": null
+      "currentAllocationId": "alloc-1784225714781-casv"
     },
     {
       "id": "item-mob-004",
       "assetTag": "KMCC-MOB-004",
       "name": "Ergonomic Wheelchair (Heavy Duty)",
       "category": "Mobility",
-      "status": "AVAILABLE",
+      "status": "ALLOCATED",
       "conditionOnCheckIn": "Good",
-      "currentAllocationId": null
+      "currentAllocationId": "alloc-1784225768753-3lrq"
     },
     {
       "id": "item-res-001",
@@ -219,6 +219,28 @@
       "notes": "",
       "id": "alloc-1784225591343-h641",
       "receiptNumber": "REC-2026-0005",
+      "status": "ACTIVE",
+      "actualReturnedAt": null
+    },
+    {
+      "itemId": "item-mob-003",
+      "beneficiaryId": "ben-1",
+      "allocatedAt": "2026-07-16T18:15:14.781Z",
+      "expectedReturnAt": "2026-08-15T00:00:00.000Z",
+      "notes": "",
+      "id": "alloc-1784225714781-casv",
+      "receiptNumber": "REC-2026-0006",
+      "status": "ACTIVE",
+      "actualReturnedAt": null
+    },
+    {
+      "itemId": "item-mob-004",
+      "beneficiaryId": "ben-1",
+      "allocatedAt": "2026-07-16T18:16:08.753Z",
+      "expectedReturnAt": "2026-08-15T00:00:00.000Z",
+      "notes": "",
+      "id": "alloc-1784225768753-3lrq",
+      "receiptNumber": "REC-2026-0007",
       "status": "ACTIVE",
       "actualReturnedAt": null
     }
