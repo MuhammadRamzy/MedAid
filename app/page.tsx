@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Item, Beneficiary, Allocation } from "@/lib/db-service";
 import { getItemsAction, getBeneficiariesAction, getAllocationsAction } from "@/app/actions";
 import { CheckoutCart } from "@/components/checkout-cart";
@@ -28,6 +29,7 @@ export default function PosDashboard() {
   // Cart State
   const [cart, setCart] = useState<Item[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,6 +54,7 @@ export default function PosDashboard() {
 
   useEffect(() => {
     loadData();
+    setMounted(true);
   }, []);
 
   // Filter items
@@ -310,30 +313,35 @@ export default function PosDashboard() {
       </div>
       </div>
 
-      {/* Floating Checkout Drawer Button */}
-      {cart.length > 0 && (
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-20 right-4 z-40 flex items-center space-x-2.5 rounded-full bg-primary px-5 py-4 text-sm font-bold text-primary-foreground shadow-2xl transition-all hover:bg-primary/95 hover:scale-105 active:scale-95 md:bottom-8 md:right-8"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <span>Checkout Cart</span>
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-200 text-xs font-black text-teal-800">
-            {cart.length}
-          </span>
-        </button>
-      )}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <>
+          {/* Floating Checkout Drawer Button */}
+          {cart.length > 0 && (
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="fixed bottom-20 right-4 z-40 flex items-center space-x-2.5 rounded-full bg-primary px-5 py-4 text-sm font-bold text-primary-foreground shadow-2xl transition-all hover:bg-primary/95 hover:scale-105 active:scale-95 md:bottom-8 md:right-8"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              <span>Checkout Cart</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-200 text-xs font-black text-teal-800">
+                {cart.length}
+              </span>
+            </button>
+          )}
 
-      {/* Checkout Sidebar/Drawer Component */}
-      <CheckoutCart
-        cartItems={cart}
-        onRemoveItem={handleRemoveCartItem}
-        onClearCart={handleClearCart}
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        beneficiaries={beneficiaries}
-        onRefreshBeneficiaries={loadData}
-      />
+          {/* Checkout Sidebar/Drawer Component */}
+          <CheckoutCart
+            cartItems={cart}
+            onRemoveItem={handleRemoveCartItem}
+            onClearCart={handleClearCart}
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            beneficiaries={beneficiaries}
+            onRefreshBeneficiaries={loadData}
+          />
+        </>,
+        document.body
+      )}
     </>
   );
 }

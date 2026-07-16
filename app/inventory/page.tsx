@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Item } from "@/lib/db-service";
 import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions";
 import {
@@ -39,6 +40,7 @@ export default function InventoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const loadItems = async () => {
     setLoading(true);
@@ -56,6 +58,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     loadItems();
+    setMounted(true);
   }, []);
 
   const handleOpenEditModal = (item: Item) => {
@@ -334,8 +337,7 @@ export default function InventoryPage() {
       </div>
       </div>
 
-      {/* Edit/Delete Inventory Modal */}
-      {editingItem && (
+      {mounted && typeof document !== "undefined" && editingItem && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl animate-slide-up border border-border overflow-y-auto max-h-[90vh] no-scrollbar">
             {/* Close */}
@@ -499,7 +501,8 @@ export default function InventoryPage() {
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
