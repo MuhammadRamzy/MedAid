@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Item } from "@/lib/db-service";
-import { getItemsAction, updateItemAction } from "@/app/actions";
+import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions";
 import {
   Search,
   Wrench,
@@ -13,7 +13,8 @@ import {
   Edit2,
   SlidersHorizontal,
   Plus,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,8 +30,12 @@ export default function InventoryPage() {
 
   // Edit Modal state
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editAssetTag, setEditAssetTag] = useState("");
+  const [editCategory, setEditCategory] = useState("");
   const [editStatus, setEditStatus] = useState<Item["status"]>("AVAILABLE");
   const [editCondition, setEditCondition] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
@@ -55,6 +60,9 @@ export default function InventoryPage() {
 
   const handleOpenEditModal = (item: Item) => {
     setEditingItem(item);
+    setEditName(item.name);
+    setEditAssetTag(item.assetTag);
+    setEditCategory(item.category);
     setEditStatus(item.status);
     setEditCondition(item.conditionOnCheckIn);
     setEditError(null);
@@ -73,6 +81,9 @@ export default function InventoryPage() {
     setEditError(null);
     try {
       const result = await updateItemAction(editingItem.id, {
+        name: editName,
+        assetTag: editAssetTag,
+        category: editCategory,
         status: editStatus,
         conditionOnCheckIn: editCondition,
       });
@@ -95,8 +106,38 @@ export default function InventoryPage() {
     }
   };
 
+  const handleDeleteItem = async () => {
+    if (!editingItem) return;
+    
+    const confirmMessage = `Are you sure you want to permanently delete "${editingItem.name}" (Tag: ${editingItem.assetTag})?\nThis will remove the item and its lease history. This action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setEditError(null);
+    try {
+      const result = await deleteItemAction(editingItem.id);
+      if (result.success) {
+        setEditSuccess(true);
+        const updatedItems = await getItemsAction();
+        setItems(updatedItems);
+        setTimeout(() => {
+          handleCloseEditModal();
+        }, 1200);
+      } else {
+        setEditError(result.error || "Failed to delete item.");
+      }
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Get distinct categories
-  const categories = ["All", ...Array.from(new Set(items.map((i) => i.category)))];
+  const categoriesList = ["Mobility", "Respiratory", "Comfort", "Orthopedic"];
+  const categories = ["All", ...categoriesList];
   const statuses = ["All", "AVAILABLE", "ALLOCATED", "MAINTENANCE", "RETIRED"];
 
   // Filter items
@@ -160,7 +201,7 @@ export default function InventoryPage() {
             Inventory & Stock Manager
           </h2>
           <p className="text-xs text-muted-foreground">
-            Manage equipment status, document repairs, and transition units from maintenance back to available stock.
+            Manage equipment status, document repairs, edit specifications, and retire or delete equipment units.
           </p>
         </div>
         <Link
@@ -195,7 +236,7 @@ export default function InventoryPage() {
 
         {/* Filter selectors */}
         <div className="flex flex-col gap-3 sm:flex-row">
-          {/* Category Selector */}
+          {/* Category Filter */}
           <div className="flex-1 space-y-1">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</label>
             <div className="flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
@@ -215,7 +256,7 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          {/* Status Selector */}
+          {/* Status Filter */}
           <div className="flex-1 space-y-1">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</label>
             <div className="flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
@@ -291,10 +332,10 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* Edit Inventory Modal */}
+      {/* Edit/Delete Inventory Modal */}
       {editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl animate-slide-up border border-border">
+          <div className="relative w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl animate-slide-up border border-border overflow-y-auto max-h-[90vh] no-scrollbar">
             {/* Close */}
             <button
               onClick={handleCloseEditModal}
@@ -306,24 +347,18 @@ export default function InventoryPage() {
             {/* Modal Title */}
             <div className="mb-4">
               <h3 className="text-lg font-black text-teal-950 flex items-center space-x-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                <span>Manage Stock Details</span>
+                <Edit2 className="h-5 w-5 text-primary" />
+                <span>Edit Equipment Registry</span>
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Update status and log maintenance condition for:
+                Update stock parameters, operational status, or delete this unit.
               </p>
-              <div className="mt-2 rounded-xl bg-muted/40 p-3 border border-border/60">
-                <p className="text-sm font-bold text-foreground">{editingItem.name}</p>
-                <p className="text-xs font-bold text-muted-foreground font-mono mt-0.5">
-                  {editingItem.assetTag}
-                </p>
-              </div>
             </div>
 
             {/* Success Feedback */}
             {editSuccess ? (
               <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-center text-sm font-bold text-emerald-800 animate-pulse">
-                Stock changes saved successfully!
+                Inventory successfully updated!
               </div>
             ) : (
               <form onSubmit={handleUpdateItem} className="space-y-4">
@@ -332,6 +367,54 @@ export default function InventoryPage() {
                     {editError}
                   </div>
                 )}
+
+                {/* Equipment Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Equipment Model Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="e.g. Standard Wheelchair Heavy Duty"
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                {/* Asset Tag */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Asset Tag / QR Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editAssetTag}
+                    onChange={(e) => setEditAssetTag(e.target.value)}
+                    placeholder="e.g. KMCC-MOB-101"
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                {/* Category Selection */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Category
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {categoriesList.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Status selector */}
                 <div className="space-y-1">
@@ -370,12 +453,12 @@ export default function InventoryPage() {
                     required
                     value={editCondition}
                     onChange={(e) => setEditCondition(e.target.value)}
-                    placeholder="e.g. Good, Excellent, Broken Wheel (Needs Repair)"
+                    placeholder="e.g. Good, Excellent, Punctured Tire"
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
-                {/* Actions */}
+                {/* Actions: Save / Cancel */}
                 <div className="flex space-x-3 border-t border-border/40 pt-4 mt-6">
                   <button
                     type="button"
@@ -391,6 +474,25 @@ export default function InventoryPage() {
                   >
                     {isSubmitting ? "Saving..." : "Save Changes"}
                   </button>
+                </div>
+
+                {/* Delete Button (Allowed if not allocated) */}
+                <div className="border-t border-border/40 pt-4">
+                  {editingItem.status !== "ALLOCATED" ? (
+                    <button
+                      type="button"
+                      onClick={handleDeleteItem}
+                      disabled={isSubmitting}
+                      className="w-full flex items-center justify-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete Equipment Permanently</span>
+                    </button>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground text-center bg-slate-50 p-2 rounded border border-slate-100">
+                      This item is currently active on loan and cannot be deleted.
+                    </p>
+                  )}
                 </div>
               </form>
             )}

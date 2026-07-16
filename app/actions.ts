@@ -198,3 +198,18 @@ export async function updateItemAction(
     return { success: false, error: "Failed to update item status." };
   }
 }
+
+export async function deleteItemAction(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await dbService.deleteItem(id);
+    revalidatePath("/");
+    revalidatePath("/allocations");
+    revalidatePath("/inventory");
+    return { success };
+  } catch (error) {
+    console.error("Failed in deleteItemAction:", error);
+    return { success: false, error: "Failed to delete item." };
+  }
+}

@@ -106,6 +106,18 @@ export const dbService = {
     return db.items[index];
   },
 
+  async deleteItem(id: string): Promise<boolean> {
+    const db = readDb();
+    const index = db.items.findIndex((item) => item.id === id);
+    if (index === -1) return false;
+    
+    db.items.splice(index, 1);
+    // Also clean up any active allocations referencing this item
+    db.allocations = db.allocations.filter((a) => a.itemId !== id);
+    writeDb(db);
+    return true;
+  },
+
   // --- BENEFICIARIES ---
   async getBeneficiaries(): Promise<Beneficiary[]> {
     const db = readDb();

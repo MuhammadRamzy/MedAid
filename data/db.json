@@ -64,15 +64,6 @@
       "currentAllocationId": null
     },
     {
-      "id": "item-res-004",
-      "assetTag": "KMCC-RES-004",
-      "name": "Oxygen Concentrator 10L (High Flow) - Unit B",
-      "category": "Respiratory",
-      "status": "MAINTENANCE",
-      "conditionOnCheckIn": "Needs Repair",
-      "currentAllocationId": null
-    },
-    {
       "id": "item-com-001",
       "assetTag": "KMCC-COM-001",
       "name": "Manual 2-Function Hospital Bed - Unit A",
