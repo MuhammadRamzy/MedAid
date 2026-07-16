@@ -1,0 +1,224 @@
+{
+  "items": [
+    {
+      "id": "item-mob-001",
+      "assetTag": "KMCC-MOB-001",
+      "name": "Standard Wheelchair (Foldable) - Unit A",
+      "category": "Mobility",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-mob-002",
+      "assetTag": "KMCC-MOB-002",
+      "name": "Standard Wheelchair (Foldable) - Unit B",
+      "category": "Mobility",
+      "status": "ALLOCATED",
+      "conditionOnCheckIn": "Excellent",
+      "currentAllocationId": "alloc-1"
+    },
+    {
+      "id": "item-mob-003",
+      "assetTag": "KMCC-MOB-003",
+      "name": "Standard Wheelchair (Foldable) - Unit C",
+      "category": "Mobility",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Fair",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-mob-004",
+      "assetTag": "KMCC-MOB-004",
+      "name": "Ergonomic Wheelchair (Heavy Duty)",
+      "category": "Mobility",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-res-001",
+      "assetTag": "KMCC-RES-001",
+      "name": "Oxygen Concentrator 5L (Philips) - Unit A",
+      "category": "Respiratory",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-res-002",
+      "assetTag": "KMCC-RES-002",
+      "name": "Oxygen Concentrator 5L (Philips) - Unit B",
+      "category": "Respiratory",
+      "status": "ALLOCATED",
+      "conditionOnCheckIn": "Excellent",
+      "currentAllocationId": "alloc-2"
+    },
+    {
+      "id": "item-res-003",
+      "assetTag": "KMCC-RES-003",
+      "name": "Oxygen Concentrator 10L (High Flow) - Unit A",
+      "category": "Respiratory",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-res-004",
+      "assetTag": "KMCC-RES-004",
+      "name": "Oxygen Concentrator 10L (High Flow) - Unit B",
+      "category": "Respiratory",
+      "status": "MAINTENANCE",
+      "conditionOnCheckIn": "Needs Repair",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-com-001",
+      "assetTag": "KMCC-COM-001",
+      "name": "Manual 2-Function Hospital Bed - Unit A",
+      "category": "Comfort",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-com-002",
+      "assetTag": "KMCC-COM-002",
+      "name": "Manual 2-Function Hospital Bed - Unit B",
+      "category": "Comfort",
+      "status": "ALLOCATED",
+      "conditionOnCheckIn": "Excellent",
+      "currentAllocationId": "alloc-3"
+    },
+    {
+      "id": "item-com-003",
+      "assetTag": "KMCC-COM-003",
+      "name": "Electric 3-Function Hospital Bed - Unit A",
+      "category": "Comfort",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Excellent",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-com-004",
+      "assetTag": "KMCC-COM-004",
+      "name": "Anti-Decubitus Air Mattress - Unit A",
+      "category": "Comfort",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-com-005",
+      "assetTag": "KMCC-COM-005",
+      "name": "Anti-Decubitus Air Mattress - Unit B",
+      "category": "Comfort",
+      "status": "MAINTENANCE",
+      "conditionOnCheckIn": "Needs Repair",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-ort-001",
+      "assetTag": "KMCC-ORT-001",
+      "name": "Adjustable Elbow Crutches (Pair A)",
+      "category": "Orthopedic",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-ort-002",
+      "assetTag": "KMCC-ORT-002",
+      "name": "Adjustable Elbow Crutches (Pair B)",
+      "category": "Orthopedic",
+      "status": "AVAILABLE",
+      "conditionOnCheckIn": "Fair",
+      "currentAllocationId": null
+    },
+    {
+      "id": "item-ort-003",
+      "assetTag": "KMCC-ORT-003",
+      "name": "Orthopedic Walker (With wheels)",
+      "category": "Orthopedic",
+      "status": "ALLOCATED",
+      "conditionOnCheckIn": "Good",
+      "currentAllocationId": "alloc-4"
+    }
+  ],
+  "beneficiaries": [
+    {
+      "id": "ben-1",
+      "name": "Aboobacker Siddique",
+      "phone": "+919847012345",
+      "address": "Rahath Manzil, Near Town Masjid, Kozhikode, Kerala - 673001",
+      "volunteerInCharge": "Faisal P.K."
+    },
+    {
+      "id": "ben-2",
+      "name": "Mariyam K.O.",
+      "phone": "+919744112233",
+      "address": "Kunnumpuram House, Areacode, Malappuram, Kerala - 673639",
+      "volunteerInCharge": "Shaji Vattapparamb"
+    },
+    {
+      "id": "ben-3",
+      "name": "K. Mohanan",
+      "phone": "+919446334455",
+      "address": "Sreevalsam, Wandoor Road, Nilambur, Kerala - 679329",
+      "volunteerInCharge": "Faisal P.K."
+    },
+    {
+      "id": "ben-4",
+      "name": "Pathumma Ibrahim",
+      "phone": "+919946123456",
+      "address": "Oasis Villa, Chembukkavu, Thrissur, Kerala - 680020",
+      "volunteerInCharge": "Shaji Vattapparamb"
+    }
+  ],
+  "allocations": [
+    {
+      "id": "alloc-1",
+      "itemId": "item-mob-002",
+      "beneficiaryId": "ben-1",
+      "allocatedAt": "2026-07-01T10:00:00.000Z",
+      "expectedReturnAt": "2026-08-01T10:00:00.000Z",
+      "actualReturnedAt": null,
+      "status": "ACTIVE",
+      "notes": "Patient recovering from hip surgery. Demands wheelchair for 1 month.",
+      "receiptNumber": "REC-2026-0001"
+    },
+    {
+      "id": "alloc-2",
+      "itemId": "item-res-002",
+      "beneficiaryId": "ben-2",
+      "allocatedAt": "2026-06-10T14:30:00.000Z",
+      "expectedReturnAt": "2026-07-10T14:30:00.000Z",
+      "actualReturnedAt": null,
+      "status": "OVERDUE",
+      "notes": "Severe COPD patient. High dependency. Return expected in July, currently overdue.",
+      "receiptNumber": "REC-2026-0002"
+    },
+    {
+      "id": "alloc-3",
+      "itemId": "item-com-002",
+      "beneficiaryId": "ben-3",
+      "allocatedAt": "2026-07-10T09:15:00.000Z",
+      "expectedReturnAt": "2026-08-10T09:15:00.000Z",
+      "actualReturnedAt": null,
+      "status": "ACTIVE",
+      "notes": "For elderly patient. Temporary use post-accident.",
+      "receiptNumber": "REC-2026-0003"
+    },
+    {
+      "id": "alloc-4",
+      "itemId": "item-ort-003",
+      "beneficiaryId": "ben-4",
+      "allocatedAt": "2026-07-05T11:00:00.000Z",
+      "expectedReturnAt": "2026-08-05T11:00:00.000Z",
+      "actualReturnedAt": null,
+      "status": "ACTIVE",
+      "notes": "Patient recovering from ankle fracture.",
+      "receiptNumber": "REC-2026-0004"
+    }
+  ]
+}

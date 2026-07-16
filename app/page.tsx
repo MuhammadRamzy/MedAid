@@ -1,101 +1,337 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from "react";
+import { Item, Beneficiary, Allocation } from "@/lib/db-service";
+import { getItemsAction, getBeneficiariesAction, getAllocationsAction } from "@/app/actions";
+import { CheckoutCart } from "@/components/checkout-cart";
+import { 
+  Search, 
+  ShoppingCart, 
+  Activity, 
+  AlertCircle, 
+  CheckCircle2, 
+  Plus, 
+  Check, 
+  X,
+  Package,
+  Wrench,
+  XOctagon
+} from "lucide-react";
+
+export default function PosDashboard() {
+  // DB States
+  const [items, setItems] = useState<Item[]>([]);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [allocations, setAllocations] = useState<(Allocation & { item?: Item; beneficiary?: Beneficiary })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cart State
+  const [cart, setCart] = useState<Item[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const categories = ["All", "Mobility", "Respiratory", "Comfort", "Orthopedic"];
+
+  const loadData = async () => {
+    try {
+      const fetchedItems = await getItemsAction();
+      const fetchedBens = await getBeneficiariesAction();
+      const fetchedAllocs = await getAllocationsAction();
+      setItems(fetchedItems);
+      setBeneficiaries(fetchedBens);
+      setAllocations(fetchedAllocs);
+    } catch (error) {
+      console.error("Error loading POS data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Filter items
+  const filteredItems = items.filter((item) => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.assetTag.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" ||
+      item.category.toLowerCase() === selectedCategory.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
+
+  // Calculate metrics
+  const availableItemsCount = items.filter((i) => i.status === "AVAILABLE").length;
+  const activeAllocationsCount = allocations.filter((a) => a.status === "ACTIVE").length;
+  const overdueReturnsCount = allocations.filter((a) => a.status === "OVERDUE").length;
+
+  const toggleCartItem = (item: Item) => {
+    if (item.status !== "AVAILABLE") return;
+    
+    setCart((prev) => {
+      const exists = prev.some((i) => i.id === item.id);
+      if (exists) {
+        return prev.filter((i) => i.id !== item.id);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setCart((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+  };
+
+  const getStatusBadge = (status: Item["status"]) => {
+    switch (status) {
+      case "AVAILABLE":
+        return (
+          <span className="inline-flex items-center space-x-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100 uppercase tracking-wide">
+            <CheckCircle2 className="h-3 w-3" />
+            <span>Available</span>
+          </span>
+        );
+      case "ALLOCATED":
+        return (
+          <span className="inline-flex items-center space-x-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-100 uppercase tracking-wide">
+            <Activity className="h-3 w-3 animate-pulse" />
+            <span>Allocated</span>
+          </span>
+        );
+      case "MAINTENANCE":
+        return (
+          <span className="inline-flex items-center space-x-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 border border-amber-100 uppercase tracking-wide">
+            <Wrench className="h-3 w-3" />
+            <span>Maintenance</span>
+          </span>
+        );
+      case "RETIRED":
+        return (
+          <span className="inline-flex items-center space-x-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 border border-slate-200 uppercase tracking-wide">
+            <XOctagon className="h-3 w-3" />
+            <span>Retired</span>
+          </span>
+        );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm font-semibold text-muted-foreground">Loading POS System...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-6">
+      {/* Welcome & Live Date */}
+      <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
+        <div>
+          <h2 className="text-xl font-extrabold tracking-tight text-teal-900 md:text-2xl">
+            POS Allocation Desk
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Search available equipment and distribute to beneficiaries immediately.
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div className="text-xs font-medium text-muted-foreground md:text-right">
+          Kerala Muslim Cultural Centre (KMCC) • {new Date().toLocaleDateString("en-IN", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="rounded-lg bg-emerald-50 p-1 text-emerald-600 border border-emerald-100">
+              <Package className="h-4 w-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-black text-emerald-800">{availableItemsCount}</p>
+          <span className="text-[9px] text-emerald-600 font-semibold">Items in stock</span>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Allocated</span>
+            <span className="rounded-lg bg-blue-50 p-1 text-blue-600 border border-blue-100">
+              <Activity className="h-4 w-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-black text-blue-800">{activeAllocationsCount}</p>
+          <span className="text-[9px] text-blue-600 font-semibold">Active ledgers</span>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Overdue</span>
+            <span className="rounded-lg bg-rose-50 p-1 text-rose-600 border border-rose-100">
+              <AlertCircle className="h-4 w-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-black text-rose-800">{overdueReturnsCount}</p>
+          <span className="text-[9px] text-rose-600 font-semibold">Needs return</span>
+        </div>
+      </div>
+
+      {/* POS Controls: Search & Category Buttons */}
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by equipment name or unique asset tag (e.g. KMCC-MOB-001)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-2xl border border-input bg-card pl-11 pr-4 py-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex space-x-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all whitespace-nowrap border ${
+                selectedCategory === cat
+                  ? "bg-primary border-primary text-primary-foreground shadow"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Inventory Grid */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Equipment Catalog ({filteredItems.length})
+          </h3>
+        </div>
+
+        {filteredItems.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-muted p-10 text-center">
+            <Package className="mx-auto h-10 w-10 text-muted-foreground/60 mb-3" />
+            <p className="text-sm font-semibold text-muted-foreground">No equipment found matching criteria.</p>
+            <p className="text-xs text-muted-foreground mt-1">Try clearing your filters or add a new item.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {filteredItems.map((item) => {
+              const inCart = cart.some((i) => i.id === item.id);
+              const isAvailable = item.status === "AVAILABLE";
+              
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => isAvailable && toggleCartItem(item)}
+                  className={`group relative flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all ${
+                    isAvailable
+                      ? inCart
+                        ? "border-teal-500 ring-2 ring-teal-500/25 bg-teal-50/10 cursor-pointer shadow-md"
+                        : "border-border hover:border-teal-300 hover:shadow-md cursor-pointer"
+                      : "border-border opacity-70 bg-muted/20 cursor-not-allowed"
+                  }`}
+                >
+                  {/* Card Content */}
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <span className="text-[10px] rounded bg-teal-50 px-2 py-0.5 font-extrabold text-teal-800 uppercase tracking-wider border border-teal-100">
+                        {item.category}
+                      </span>
+                      {getStatusBadge(item.status)}
+                    </div>
+                    <h4 className="mt-3.5 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                      {item.name}
+                    </h4>
+                    <p className="mt-1 text-[10px] font-bold text-muted-foreground font-mono">
+                      {item.assetTag}
+                    </p>
+                  </div>
+
+                  {/* Action/Indicator footer */}
+                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
+                    <span className="text-[10px] text-muted-foreground">
+                      Condition: <strong className="text-foreground">{item.conditionOnCheckIn}</strong>
+                    </span>
+
+                    {isAvailable && (
+                      <div className="flex items-center space-x-1 text-xs font-bold text-primary">
+                        {inCart ? (
+                          <span className="flex items-center space-x-1 text-teal-600 rounded bg-teal-100 px-2 py-1">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            <span>Selected</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center space-x-1 hover:text-teal-700 transition-colors bg-teal-50 text-teal-800 border border-teal-100 rounded px-2.5 py-1">
+                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                            <span>Select</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Floating Checkout Drawer Button */}
+      {cart.length > 0 && (
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-20 right-4 z-40 flex items-center space-x-2.5 rounded-full bg-primary px-5 py-4 text-sm font-bold text-primary-foreground shadow-2xl transition-all hover:bg-primary/95 hover:scale-105 active:scale-95 md:bottom-8 md:right-8"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <ShoppingCart className="h-5 w-5" />
+          <span>Checkout Cart</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-200 text-xs font-black text-teal-800">
+            {cart.length}
+          </span>
+        </button>
+      )}
+
+      {/* Checkout Sidebar/Drawer Component */}
+      <CheckoutCart
+        cartItems={cart}
+        onRemoveItem={handleRemoveCartItem}
+        onClearCart={handleClearCart}
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        beneficiaries={beneficiaries}
+        onRefreshBeneficiaries={loadData}
+      />
     </div>
   );
 }
