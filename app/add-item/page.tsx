@@ -61,7 +61,7 @@ export default function AddItemPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-6 animate-page">
       {/* Back button */}
       <Link
         href="/"

@@ -40,14 +40,14 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center space-y-1 transition-colors ${
+              className={`flex flex-col items-center justify-center py-1.5 px-3.5 rounded-xl transition-all duration-200 active:scale-95 ${
                 isActive
-                  ? "text-primary font-medium"
+                  ? "bg-teal-50 text-primary font-bold shadow-sm border border-teal-100/50"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] tracking-wide">{item.label}</span>
+              <Icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
+              <span className="text-[9px] font-bold tracking-wide mt-0.5">{item.label}</span>
             </Link>
           );
         })}

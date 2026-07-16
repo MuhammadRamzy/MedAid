@@ -134,7 +134,7 @@ export default function PosDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page">
       {/* Welcome & Live Date */}
       <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
         <div>
@@ -156,38 +156,38 @@ export default function PosDashboard() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-2xl border border-border bg-card p-2.5 sm:p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Available</span>
-            <span className="rounded-lg bg-emerald-50 p-1 text-emerald-600 border border-emerald-100">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground block truncate">Available</span>
+            <span className="rounded-lg bg-emerald-50 p-1 text-emerald-600 border border-emerald-100 hidden sm:inline-flex">
               <Package className="h-4 w-4" />
             </span>
           </div>
-          <p className="mt-2 text-2xl font-black text-emerald-800">{availableItemsCount}</p>
-          <span className="text-xs text-emerald-600 font-bold">Items in stock</span>
+          <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-black text-emerald-800">{availableItemsCount}</p>
+          <span className="text-[9px] sm:text-xs text-emerald-600 font-bold block truncate">Items in stock</span>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+        <div className="rounded-2xl border border-border bg-card p-2.5 sm:p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Allocated</span>
-            <span className="rounded-lg bg-blue-50 p-1 text-blue-600 border border-blue-100">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground block truncate">Allocated</span>
+            <span className="rounded-lg bg-blue-50 p-1 text-blue-600 border border-blue-100 hidden sm:inline-flex">
               <Activity className="h-4 w-4" />
             </span>
           </div>
-          <p className="mt-2 text-2xl font-black text-blue-800">{activeAllocationsCount}</p>
-          <span className="text-xs text-blue-600 font-bold">Active ledgers</span>
+          <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-black text-blue-800">{activeAllocationsCount}</p>
+          <span className="text-[9px] sm:text-xs text-blue-600 font-bold block truncate">Active ledgers</span>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
+        <div className="rounded-2xl border border-border bg-card p-2.5 sm:p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Overdue</span>
-            <span className="rounded-lg bg-rose-50 p-1 text-rose-600 border border-rose-100">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground block truncate">Overdue</span>
+            <span className="rounded-lg bg-rose-50 p-1 text-rose-600 border border-rose-100 hidden sm:inline-flex">
               <AlertCircle className="h-4 w-4" />
             </span>
           </div>
-          <p className="mt-2 text-2xl font-black text-rose-800">{overdueReturnsCount}</p>
-          <span className="text-xs text-rose-600 font-bold">Needs return</span>
+          <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-black text-rose-800">{overdueReturnsCount}</p>
+          <span className="text-[9px] sm:text-xs text-rose-600 font-bold block truncate">Needs return</span>
         </div>
       </div>
 
