@@ -134,7 +134,7 @@ export default function PosDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="space-y-6 animate-page">
       {/* Welcome & Live Date */}
       <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
@@ -334,6 +334,6 @@ export default function PosDashboard() {
         beneficiaries={beneficiaries}
         onRefreshBeneficiaries={loadData}
       />
-    </div>
+    </>
   );
 }

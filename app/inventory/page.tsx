@@ -193,8 +193,8 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="space-y-6 animate-page">
+    <>
+      <div className="space-y-6 pb-12 animate-page">
       {/* Title Header */}
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
@@ -501,6 +501,6 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
