@@ -5,9 +5,9 @@
       "assetTag": "KMCC-MOB-001",
       "name": "Standard Wheelchair (Foldable) - Unit A",
       "category": "Mobility",
-      "status": "AVAILABLE",
+      "status": "ALLOCATED",
       "conditionOnCheckIn": "Good",
-      "currentAllocationId": null
+      "currentAllocationId": "alloc-1784225591343-h641"
     },
     {
       "id": "item-mob-002",
@@ -210,6 +210,17 @@
       "status": "ACTIVE",
       "notes": "Patient recovering from ankle fracture.",
       "receiptNumber": "REC-2026-0004"
+    },
+    {
+      "itemId": "item-mob-001",
+      "beneficiaryId": "ben-1",
+      "allocatedAt": "2026-07-16T18:13:11.343Z",
+      "expectedReturnAt": "2026-08-15T00:00:00.000Z",
+      "notes": "",
+      "id": "alloc-1784225591343-h641",
+      "receiptNumber": "REC-2026-0005",
+      "status": "ACTIVE",
+      "actualReturnedAt": null
     }
   ]
 }

@@ -1,10 +1,159 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Item, Beneficiary } from "@/lib/db-service";
 import { createBeneficiaryAction, createAllocationAction } from "@/app/actions";
-import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, ChevronRight, Loader2 } from "lucide-react";
+import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, Loader2, ChevronsRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+interface SlideToConfirmProps {
+  onConfirm: () => void;
+  disabled?: boolean;
+  isLoading?: boolean;
+}
+
+export function SlideToConfirm({ onConfirm, disabled, isLoading }: SlideToConfirmProps) {
+  const [sliderPosition, setSliderPosition] = useState(0); // 0 to 100
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
+  const trackWidthRef = useRef(0);
+  
+  const sliderPositionRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
+  // Sync refs
+  sliderPositionRef.current = sliderPosition;
+  isDraggingRef.current = isDragging;
+
+  const handleStart = (clientX: number) => {
+    if (disabled || isLoading) return;
+    setIsDragging(true);
+    startXRef.current = clientX;
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const handleWidth = 48; // w-12 = 48px
+      trackWidthRef.current = rect.width - handleWidth - 8; // padding (4px left, 4px right)
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || trackWidthRef.current <= 0) return;
+      const deltaX = e.clientX - startXRef.current;
+      let percentage = (deltaX / trackWidthRef.current) * 100;
+      if (percentage < 0) percentage = 0;
+      if (percentage > 100) percentage = 100;
+      setSliderPosition(percentage);
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      setIsDragging(false);
+      if (sliderPositionRef.current >= 90) {
+        setSliderPosition(100);
+        onConfirm();
+      } else {
+        setSliderPosition(0);
+      }
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current || trackWidthRef.current <= 0 || e.touches.length === 0) return;
+      const deltaX = e.touches[0].clientX - startXRef.current;
+      let percentage = (deltaX / trackWidthRef.current) * 100;
+      if (percentage < 0) percentage = 0;
+      if (percentage > 100) percentage = 100;
+      setSliderPosition(percentage);
+    };
+
+    const handleGlobalTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      setIsDragging(false);
+      if (sliderPositionRef.current >= 90) {
+        setSliderPosition(100);
+        onConfirm();
+      } else {
+        setSliderPosition(0);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleGlobalMouseMove);
+      window.addEventListener("mouseup", handleGlobalMouseUp);
+      window.addEventListener("touchmove", handleGlobalTouchMove);
+      window.addEventListener("touchend", handleGlobalTouchEnd);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+      window.removeEventListener("touchmove", handleGlobalTouchMove);
+      window.removeEventListener("touchend", handleGlobalTouchEnd);
+    };
+  }, [isDragging, onConfirm]);
+
+  // Reset slider position if loading state finishes
+  useEffect(() => {
+    if (!isLoading) {
+      setSliderPosition(0);
+    }
+  }, [isLoading]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative w-full h-14 rounded-2xl bg-teal-50/70 border border-teal-100/70 flex items-center justify-center overflow-hidden select-none ${
+        disabled ? "opacity-50 pointer-events-none" : ""
+      }`}
+    >
+      <style>{`
+        @keyframes bounce-horizontal {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          50% {
+            transform: translateX(4px);
+          }
+        }
+        .animate-bounce-horizontal {
+          animation: bounce-horizontal 1s infinite;
+        }
+      `}</style>
+
+      {/* Progress track background */}
+      <div
+        className="absolute left-0 top-0 bottom-0 bg-teal-600/10 transition-all duration-75"
+        style={{ width: `${sliderPosition}%` }}
+      />
+
+      {/* Track Label */}
+      <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-teal-800 animate-pulse z-10 pointer-events-none">
+        {isLoading ? "Processing Lease Request..." : "Slide to Confirm Allocation"}
+      </span>
+
+      {/* Slider Button Handle */}
+      <div
+        onMouseDown={(e) => handleStart(e.clientX)}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) {
+            handleStart(e.touches[0].clientX);
+          }
+        }}
+        className={`absolute left-1 top-1 h-12 w-12 rounded-xl bg-teal-600 text-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md z-20 ${
+          isDragging ? "" : "transition-transform duration-200"
+        }`}
+        style={{ transform: `translateX(${(sliderPosition / 100) * trackWidthRef.current}px)` }}
+      >
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <ChevronsRight className="h-5 w-5 animate-bounce-horizontal" />
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface CheckoutCartProps {
   cartItems: Item[];
@@ -62,8 +211,8 @@ export function CheckoutCart({
 
   if (!isOpen) return null;
 
-  const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckout = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (cartItems.length === 0) {
       setError("Please add at least one item to the cart.");
       return;
@@ -336,23 +485,11 @@ export function CheckoutCart({
 
         {/* Sticky Bottom Actions */}
         <div className="border-t border-border bg-card p-4 flex-shrink-0">
-          <button
-            type="submit"
-            disabled={isSubmitting || cartItems.length === 0}
-            className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Processing Allocation...</span>
-              </>
-            ) : (
-              <>
-                <span>Process Allocation</span>
-                <ChevronRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
+          <SlideToConfirm
+            onConfirm={handleCheckout}
+            disabled={cartItems.length === 0}
+            isLoading={isSubmitting}
+          />
         </div>
       </form>
     </div>

@@ -30,6 +30,7 @@ export default function PosDashboard() {
   const [cart, setCart] = useState<Item[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,6 +56,7 @@ export default function PosDashboard() {
   useEffect(() => {
     loadData();
     setMounted(true);
+    setPortalTarget(document.getElementById("header-cart-portal"));
   }, []);
 
   // Filter items
@@ -313,33 +315,30 @@ export default function PosDashboard() {
       </div>
       </div>
 
-      {mounted && typeof document !== "undefined" && createPortal(
-        <>
-          {/* Floating Checkout Drawer Button */}
-          {cart.length > 0 && (
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="fixed bottom-20 right-4 z-40 flex items-center space-x-2.5 rounded-full bg-primary px-5 py-4 text-sm font-bold text-primary-foreground shadow-2xl transition-all hover:bg-primary/95 hover:scale-105 active:scale-95 md:bottom-8 md:right-8"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              <span>Checkout Cart</span>
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-200 text-xs font-black text-teal-800">
-                {cart.length}
-              </span>
-            </button>
-          )}
+      {mounted && portalTarget && cart.length > 0 && createPortal(
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="flex items-center space-x-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all active:scale-95"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          <span>Cart</span>
+          <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white text-[10px] font-black text-teal-800">
+            {cart.length}
+          </span>
+        </button>,
+        portalTarget
+      )}
 
-          {/* Checkout Sidebar/Drawer Component */}
-          <CheckoutCart
-            cartItems={cart}
-            onRemoveItem={handleRemoveCartItem}
-            onClearCart={handleClearCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            beneficiaries={beneficiaries}
-            onRefreshBeneficiaries={loadData}
-          />
-        </>,
+      {mounted && typeof document !== "undefined" && createPortal(
+        <CheckoutCart
+          cartItems={cart}
+          onRemoveItem={handleRemoveCartItem}
+          onClearCart={handleClearCart}
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          beneficiaries={beneficiaries}
+          onRefreshBeneficiaries={loadData}
+        />,
         document.body
       )}
     </>

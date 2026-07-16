@@ -66,6 +66,9 @@ export default function RootLayout({
               </div>
             </Link>
 
+            {/* Portal target for mobile header checkout cart */}
+            <div id="header-cart-portal" className="flex items-center z-50" />
+
             <nav className="hidden items-center space-x-6 md:flex">
               <Link
                 href="/"
