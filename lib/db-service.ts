@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import initialDbData from "../data/db.json";
 
 export interface Item {
   id: string;
@@ -37,22 +38,24 @@ interface Database {
   allocations: Allocation[];
 }
 
-const DB_PATH = path.join(process.cwd(), "data", "db.json");
+const IS_VERCEL = process.env.VERCEL === "1";
+const DB_PATH = IS_VERCEL
+  ? path.join("/tmp", "db.json")
+  : path.join(process.cwd(), "data", "db.json");
 
 function readDb(): Database {
   try {
     if (!fs.existsSync(DB_PATH)) {
       // Ensure the directory exists
       fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-      const initialDb: Database = { items: [], beneficiaries: [], allocations: [] };
-      fs.writeFileSync(DB_PATH, JSON.stringify(initialDb, null, 2), "utf8");
-      return initialDb;
+      fs.writeFileSync(DB_PATH, JSON.stringify(initialDbData, null, 2), "utf8");
+      return initialDbData as unknown as Database;
     }
     const data = fs.readFileSync(DB_PATH, "utf8");
     return JSON.parse(data) as Database;
   } catch (error) {
     console.error("Failed to read database:", error);
-    return { items: [], beneficiaries: [], allocations: [] };
+    return initialDbData as unknown as Database;
   }
 }
 

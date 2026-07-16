@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { PWARegister } from "@/components/pwa-register";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutGrid, ClipboardList, PlusCircle } from "lucide-react";
+import { LayoutGrid, ClipboardList, PlusCircle, Wrench } from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -66,7 +66,6 @@ export default function RootLayout({
               </div>
             </Link>
 
-            {/* Desktop Navigation Links */}
             <nav className="hidden items-center space-x-6 md:flex">
               <Link
                 href="/"
@@ -81,6 +80,13 @@ export default function RootLayout({
               >
                 <ClipboardList className="h-4 w-4" />
                 <span>Allocations</span>
+              </Link>
+              <Link
+                href="/inventory"
+                className="flex items-center space-x-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Wrench className="h-4 w-4" />
+                <span>Stock Manager</span>
               </Link>
               <Link
                 href="/add-item"

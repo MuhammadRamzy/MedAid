@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, ClipboardList, PlusCircle } from "lucide-react";
+import { LayoutGrid, ClipboardList, PlusCircle, Wrench } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -17,6 +17,11 @@ export function BottomNav() {
       label: "Allocations",
       href: "/allocations",
       icon: ClipboardList,
+    },
+    {
+      label: "Stock Manager",
+      href: "/inventory",
+      icon: Wrench,
     },
     {
       label: "Add Item",

@@ -182,3 +182,19 @@ export async function returnAllocationAction(data: {
     return { success: false, error: "Failed to process equipment return." };
   }
 }
+
+export async function updateItemAction(
+  id: string,
+  updates: Partial<Item>
+): Promise<{ success: boolean; item?: Item | null; error?: string }> {
+  try {
+    const item = await dbService.updateItem(id, updates);
+    revalidatePath("/");
+    revalidatePath("/allocations");
+    revalidatePath("/inventory");
+    return { success: true, item };
+  } catch (error) {
+    console.error("Failed in updateItemAction:", error);
+    return { success: false, error: "Failed to update item status." };
+  }
+}
