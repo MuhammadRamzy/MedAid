@@ -133,7 +133,10 @@ export function CheckoutCart({
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Cart Drawer Content */}
-      <div className="relative flex h-full w-full max-w-md flex-col bg-card shadow-2xl animate-slide-up md:animate-none md:rounded-l-2xl border-l border-border">
+      <form
+        onSubmit={handleCheckout}
+        className="relative flex h-full w-full max-w-md flex-col bg-card shadow-2xl animate-slide-up md:animate-none md:rounded-l-2xl border-l border-border"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center space-x-2">
@@ -143,6 +146,7 @@ export function CheckoutCart({
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
@@ -150,8 +154,8 @@ export function CheckoutCart({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleCheckout} className="flex flex-1 flex-col overflow-y-auto p-5 space-y-6 pb-24 no-scrollbar">
+        {/* Form Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 pb-24 no-scrollbar">
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3.5 text-sm text-destructive font-medium">
               {error}
@@ -328,28 +332,29 @@ export function CheckoutCart({
             </div>
           </div>
 
-          {/* Sticky Bottom Actions */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card p-4">
-            <button
-              type="submit"
-              disabled={isSubmitting || cartItems.length === 0}
-              className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Processing Allocation...</span>
-                </>
-              ) : (
-                <>
-                  <span>Process Allocation</span>
-                  <ChevronRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        {/* Sticky Bottom Actions */}
+        <div className="border-t border-border bg-card p-4 flex-shrink-0">
+          <button
+            type="submit"
+            disabled={isSubmitting || cartItems.length === 0}
+            className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Processing Allocation...</span>
+              </>
+            ) : (
+              <>
+                <span>Process Allocation</span>
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
