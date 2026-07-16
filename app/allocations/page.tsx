@@ -13,7 +13,8 @@ import {
   ArrowLeftRight, 
   X, 
   Printer,
-  ClipboardList
+  ClipboardList,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 
@@ -133,6 +134,50 @@ export default function AllocationsPage() {
     }
   };
 
+  const getReminderWhatsAppUrl = (
+    alloc: Allocation & { item?: Item; beneficiary?: Beneficiary }
+  ) => {
+    if (!alloc.beneficiary || !alloc.item) return "#";
+    const cleanPhone = alloc.beneficiary.phone.replace(/\D/g, "");
+    
+    const returnDate = new Date(alloc.expectedReturnAt).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+    
+    let text = "";
+    if (alloc.status === "OVERDUE") {
+      text = `*KMCC CHARITY MEDICAL HELP WING - OVERDUE RETURN REMINDER*
+--------------------------------------------------
+Dear ${alloc.beneficiary.name},
+
+This is a friendly reminder that the *${alloc.item.name}* (Asset Tag: ${alloc.item.assetTag}) you borrowed on ${new Date(alloc.allocatedAt).toLocaleDateString("en-IN")} was expected to be returned by *${returnDate}*.
+
+Please return the equipment to the KMCC desk at your earliest convenience so it can be serviced and distributed to other patients in need.
+
+If you have any questions, please contact the volunteer in charge: ${alloc.beneficiary.volunteerInCharge}.
+
+Thank you.`;
+    } else {
+      text = `*KMCC CHARITY MEDICAL HELP WING - LEASE STATUS*
+--------------------------------------------------
+Dear ${alloc.beneficiary.name},
+
+This is to confirm that you have an active distribution of *${alloc.item.name}* (Asset Tag: ${alloc.item.assetTag}) since ${new Date(alloc.allocatedAt).toLocaleDateString("en-IN")}.
+
+*Expected Return Date:* ${returnDate}
+
+Please ensure the equipment is returned in clean, sanitised condition by the due date.
+
+For assistance, contact Faisal/Shaji or your volunteer in charge: ${alloc.beneficiary.volunteerInCharge}.
+
+Thank you.`;
+    }
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
@@ -218,18 +263,29 @@ export default function AllocationsPage() {
                 {/* Top Section: Header & Status */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
                   <div>
-                    <span className="text-[10px] font-bold font-mono text-muted-foreground">
+                    <span className="text-xs font-bold font-mono text-muted-foreground">
                       {alloc.receiptNumber}
                     </span>
-                    <h3 className="text-sm font-black text-teal-950 mt-0.5">
+                    <h3 className="text-base font-black text-teal-950 mt-0.5">
                       {alloc.item?.name || "Deleted Item"}
                     </h3>
-                    <span className="text-[10px] rounded bg-teal-50 px-1.5 py-0.5 font-bold text-teal-800 uppercase tracking-wider border border-teal-100 mt-1 inline-block">
+                    <span className="text-xs rounded bg-teal-50 px-1.5 py-0.5 font-bold text-teal-800 uppercase tracking-wider border border-teal-100 mt-1 inline-block">
                       {alloc.item?.assetTag}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(alloc.status)}
+                    {alloc.status !== "RETURNED" && (
+                      <a
+                        href={getReminderWhatsAppUrl(alloc)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all border border-emerald-100 bg-emerald-50/30"
+                        title="Send WhatsApp Reminder"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </a>
+                    )}
                     <Link
                       href={`/receipt/${alloc.id}`}
                       className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-primary transition-all border border-border"
@@ -241,20 +297,20 @@ export default function AllocationsPage() {
                 </div>
 
                 {/* Details Section */}
-                <div className="mt-4 grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 md:grid-cols-3">
+                <div className="mt-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 md:grid-cols-3">
                   {/* Beneficiary */}
                   <div className="space-y-2">
-                    <p className="flex items-center space-x-2 font-semibold text-muted-foreground">
+                    <p className="flex items-center space-x-2 font-bold text-muted-foreground">
                       <User className="h-3.5 w-3.5 text-teal-700" />
                       <span>Beneficiary</span>
                     </p>
                     <div className="pl-5.5 space-y-0.5">
-                      <p className="font-bold text-foreground">{alloc.beneficiary?.name}</p>
-                      <p className="flex items-center space-x-1 text-[11px] text-muted-foreground font-mono">
+                      <p className="font-extrabold text-foreground">{alloc.beneficiary?.name}</p>
+                      <p className="flex items-center space-x-1 text-xs text-muted-foreground font-mono">
                         <Phone className="h-3 w-3" />
                         <span>{alloc.beneficiary?.phone}</span>
                       </p>
-                      <p className="flex items-start space-x-1 text-[11px] text-muted-foreground leading-normal mt-1">
+                      <p className="flex items-start space-x-1 text-xs text-muted-foreground leading-normal mt-1">
                         <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                         <span>{alloc.beneficiary?.address}</span>
                       </p>
@@ -263,11 +319,11 @@ export default function AllocationsPage() {
 
                   {/* Dates */}
                   <div className="space-y-2">
-                    <p className="flex items-center space-x-2 font-semibold text-muted-foreground">
+                    <p className="flex items-center space-x-2 font-bold text-muted-foreground">
                       <Calendar className="h-3.5 w-3.5 text-teal-700" />
                       <span>Timeline</span>
                     </p>
-                    <div className="pl-5.5 space-y-1 text-[11px]">
+                    <div className="pl-5.5 space-y-1 text-xs">
                       <p>
                         <span className="text-muted-foreground">Allocated:</span>{" "}
                         <strong className="text-foreground">
@@ -303,11 +359,11 @@ export default function AllocationsPage() {
 
                   {/* Notes & Volunteer */}
                   <div className="space-y-2 sm:col-span-2 md:col-span-1">
-                    <p className="flex items-center space-x-2 font-semibold text-muted-foreground">
+                    <p className="flex items-center space-x-2 font-bold text-muted-foreground">
                       <Clipboard className="h-3.5 w-3.5 text-teal-700" />
                       <span>Notes & Management</span>
                     </p>
-                    <div className="pl-5.5 space-y-1 text-[11px]">
+                    <div className="pl-5.5 space-y-1 text-xs">
                       <p className="italic text-muted-foreground leading-normal">
                         &ldquo;{alloc.notes || "No notes added"}&rdquo;
                       </p>
@@ -326,7 +382,7 @@ export default function AllocationsPage() {
                   <div className="mt-4 flex justify-end border-t border-border/40 pt-3">
                     <button
                       onClick={() => handleOpenReturnModal(alloc)}
-                      className="flex items-center space-x-1.5 rounded-xl bg-teal-50 px-4 py-2.5 text-xs font-bold text-teal-800 border border-teal-200 transition-all hover:bg-teal-100 hover:text-teal-900 active:scale-[0.98]"
+                      className="flex items-center space-x-1.5 rounded-xl bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-800 border border-teal-200 transition-all hover:bg-teal-100 hover:text-teal-900 active:scale-[0.98]"
                     >
                       <ArrowLeftRight className="h-3.5 w-3.5" />
                       <span>Process Check-In (Return)</span>

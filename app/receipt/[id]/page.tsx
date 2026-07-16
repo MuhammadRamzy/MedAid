@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Allocation, Item, Beneficiary } from "@/lib/db-service";
 import { getAllocationsAction } from "@/app/actions";
-import { Printer, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
+import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -52,6 +52,36 @@ export default function ReceiptPage() {
     }
   };
 
+  const getWhatsAppUrl = () => {
+    if (allocations.length === 0 || !beneficiary) return "#";
+    const cleanPhone = beneficiary.phone.replace(/\D/g, "");
+    
+    const itemsText = allocations.map((a) => `- ${a.item?.name} (Tag: ${a.item?.assetTag})`).join("\n");
+    const returnDate = new Date(allocations[0].expectedReturnAt).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+    
+    const text = `*KMCC CHARITY MEDICAL HELP WING*
+----------------------------------------
+*Receipt Number:* ${receiptNumbers}
+*Date:* ${dateAllocated.toLocaleDateString("en-IN")}
+*Beneficiary Name:* ${beneficiary.name}
+*Volunteer In-charge:* ${volunteer}
+
+*Borrowed Equipment:*
+${itemsText}
+
+*Expected Return Date:* ${returnDate}
+
+_Priya ${beneficiary.name}, KMCC Medical Help Wing-il ninnu nalkiya upakaranam expected date aagumbol thirichu elpikkan thalcharyappedunnu. Nandi._
+
+Thank you for your cooperation!`;
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
@@ -84,8 +114,7 @@ export default function ReceiptPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      {/* Screen view Navigation controls (Hidden when printed) */}
-      <div className="flex items-center justify-between border-b border-border/80 pb-4 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-4 print:hidden">
         <Link
           href="/"
           className="flex items-center space-x-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
@@ -93,13 +122,24 @@ export default function ReceiptPage() {
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>POS Checkout</span>
         </Link>
-        <button
-          onClick={handlePrint}
-          className="flex items-center space-x-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 transition-all active:scale-[0.98]"
-        >
-          <Printer className="h-4 w-4" />
-          <span>Print Receipt</span>
-        </button>
+        <div className="flex space-x-2">
+          <a
+            href={getWhatsAppUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 transition-all active:scale-[0.98]"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>WhatsApp Receipt</span>
+          </a>
+          <button
+            onClick={handlePrint}
+            className="flex items-center space-x-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 transition-all active:scale-[0.98]"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Print Receipt</span>
+          </button>
+        </div>
       </div>
 
       {/* Screen-only Success Banner (Hidden when printed) */}

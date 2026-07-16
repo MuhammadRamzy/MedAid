@@ -174,7 +174,7 @@ export function CheckoutCart({
                   >
                     <div>
                       <p className="text-sm font-semibold">{item.name}</p>
-                      <span className="text-[10px] rounded bg-teal-50 px-1.5 py-0.5 font-bold text-teal-700 uppercase tracking-wide border border-teal-100 mt-1 inline-block">
+                      <span className="text-xs rounded bg-teal-50 px-1.5 py-0.5 font-bold text-teal-700 uppercase tracking-wide border border-teal-100 mt-1 inline-block">
                         {item.assetTag}
                       </span>
                     </div>
@@ -194,12 +194,12 @@ export function CheckoutCart({
           {/* Beneficiary Selection Header */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Beneficiary Information</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Beneficiary Information</h3>
               <div className="flex rounded-lg border border-border p-0.5 bg-muted">
                 <button
                   type="button"
                   onClick={() => setBeneficiaryMode("existing")}
-                  className={`flex items-center space-x-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                  className={`flex items-center space-x-1 rounded-md px-2.5 py-1 text-sm font-semibold transition-all ${
                     beneficiaryMode === "existing"
                       ? "bg-card text-teal-800 shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -211,7 +211,7 @@ export function CheckoutCart({
                 <button
                   type="button"
                   onClick={() => setBeneficiaryMode("new")}
-                  className={`flex items-center space-x-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                  className={`flex items-center space-x-1 rounded-md px-2.5 py-1 text-sm font-semibold transition-all ${
                     beneficiaryMode === "new"
                       ? "bg-card text-teal-800 shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -225,7 +225,7 @@ export function CheckoutCart({
 
             {beneficiaryMode === "existing" ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground">Search Beneficiary</label>
+                <label className="text-sm font-semibold text-muted-foreground">Search Beneficiary</label>
                 <select
                   value={selectedBeneficiaryId}
                   onChange={(e) => setSelectedBeneficiaryId(e.target.value)}
@@ -245,7 +245,7 @@ export function CheckoutCart({
             ) : (
               <div className="space-y-3 rounded-xl border border-border p-4 bg-muted/20">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground">Full Name</label>
+                  <label className="text-sm font-bold text-muted-foreground">Full Name</label>
                   <input
                     type="text"
                     required
@@ -257,7 +257,7 @@ export function CheckoutCart({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground">WhatsApp Number</label>
+                  <label className="text-sm font-bold text-muted-foreground">WhatsApp Number</label>
                   <input
                     type="tel"
                     required
@@ -269,7 +269,7 @@ export function CheckoutCart({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground">Residential Address</label>
+                  <label className="text-sm font-bold text-muted-foreground">Residential Address</label>
                   <textarea
                     required
                     rows={2}
@@ -281,7 +281,7 @@ export function CheckoutCart({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground">KMCC Volunteer In Charge</label>
+                  <label className="text-sm font-bold text-muted-foreground">KMCC Volunteer In Charge</label>
                   <input
                     type="text"
                     required

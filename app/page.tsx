@@ -159,35 +159,35 @@ export default function PosDashboard() {
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Available</span>
             <span className="rounded-lg bg-emerald-50 p-1 text-emerald-600 border border-emerald-100">
               <Package className="h-4 w-4" />
             </span>
           </div>
           <p className="mt-2 text-2xl font-black text-emerald-800">{availableItemsCount}</p>
-          <span className="text-[9px] text-emerald-600 font-semibold">Items in stock</span>
+          <span className="text-xs text-emerald-600 font-bold">Items in stock</span>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Allocated</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Allocated</span>
             <span className="rounded-lg bg-blue-50 p-1 text-blue-600 border border-blue-100">
               <Activity className="h-4 w-4" />
             </span>
           </div>
           <p className="mt-2 text-2xl font-black text-blue-800">{activeAllocationsCount}</p>
-          <span className="text-[9px] text-blue-600 font-semibold">Active ledgers</span>
+          <span className="text-xs text-blue-600 font-bold">Active ledgers</span>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Overdue</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Overdue</span>
             <span className="rounded-lg bg-rose-50 p-1 text-rose-600 border border-rose-100">
               <AlertCircle className="h-4 w-4" />
             </span>
           </div>
           <p className="mt-2 text-2xl font-black text-rose-800">{overdueReturnsCount}</p>
-          <span className="text-[9px] text-rose-600 font-semibold">Needs return</span>
+          <span className="text-xs text-rose-600 font-bold">Needs return</span>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export default function PosDashboard() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all whitespace-nowrap border ${
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition-all whitespace-nowrap border ${
                 selectedCategory === cat
                   ? "bg-primary border-primary text-primary-foreground shadow"
                   : "bg-card border-border text-muted-foreground hover:text-foreground"
@@ -266,29 +266,29 @@ export default function PosDashboard() {
                   {/* Card Content */}
                   <div>
                     <div className="flex items-start justify-between">
-                      <span className="text-[10px] rounded bg-teal-50 px-2 py-0.5 font-extrabold text-teal-800 uppercase tracking-wider border border-teal-100">
+                      <span className="text-xs rounded bg-teal-50 px-2 py-0.5 font-extrabold text-teal-800 uppercase tracking-wider border border-teal-100">
                         {item.category}
                       </span>
                       {getStatusBadge(item.status)}
                     </div>
-                    <h4 className="mt-3.5 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                    <h4 className="mt-3.5 text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
                       {item.name}
                     </h4>
-                    <p className="mt-1 text-[10px] font-bold text-muted-foreground font-mono">
+                    <p className="mt-1 text-xs font-bold text-muted-foreground font-mono">
                       {item.assetTag}
                     </p>
                   </div>
 
                   {/* Action/Indicator footer */}
                   <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       Condition: <strong className="text-foreground">{item.conditionOnCheckIn}</strong>
                     </span>
 
                     {isAvailable && (
-                      <div className="flex items-center space-x-1 text-xs font-bold text-primary">
+                      <div className="flex items-center space-x-1 text-sm font-bold text-primary">
                         {inCart ? (
-                          <span className="flex items-center space-x-1 text-teal-600 rounded bg-teal-100 px-2 py-1">
+                          <span className="flex items-center space-x-1 text-teal-600 rounded bg-teal-100 px-2.5 py-1">
                             <Check className="h-3.5 w-3.5 stroke-[3]" />
                             <span>Selected</span>
                           </span>
