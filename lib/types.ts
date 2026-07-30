@@ -1,8 +1,18 @@
 import type { Condition, ItemStatus } from "@/lib/domain/condition";
 import type { AllocationStatus, DerivedAllocationStatus } from "@/lib/domain/allocation";
 import type { Acquisition } from "@/lib/domain/acquisition";
+import type { ContributionInput, ContributionMethod, ContributionStage } from "@/lib/domain/contribution";
 
-export type { Condition, ItemStatus, AllocationStatus, DerivedAllocationStatus, Acquisition };
+export type {
+  Condition,
+  ItemStatus,
+  AllocationStatus,
+  DerivedAllocationStatus,
+  Acquisition,
+  ContributionInput,
+  ContributionMethod,
+  ContributionStage,
+};
 
 export type UserRole = "admin" | "volunteer";
 
@@ -64,4 +74,16 @@ export interface SessionUser {
   uid: string;
   email: string;
   role: UserRole;
+}
+
+export interface Contribution {
+  id: string;
+  beneficiaryId: string;
+  allocationId: string;
+  stage: ContributionStage;
+  amount: number;
+  method: ContributionMethod;
+  reference: string;
+  collectedBy: string;
+  collectedAt: string;
 }
