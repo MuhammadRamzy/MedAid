@@ -1,28 +1,34 @@
-# KMCC Medical Equipment Distribution POS & PWA (MedAid)
+# QIDMA Medical Aid
 
-An industrial-grade, mobile-first Progressive Web Application (PWA) and Point of Sale (POS) system designed for the Kerala Muslim Cultural Centre (KMCC) charity wing to distribute, track, and manage shared medical equipment (wheelchairs, oxygen concentrators, hospital beds, etc.) to beneficiaries.
+*By KMCC Qatar Vanimal Panchayat*
+
+A mobile-first Progressive Web Application (PWA) and Point of Sale (POS)-style system for the KMCC Qatar committee's medical aid programme, used to register, track, and lend shared medical equipment (wheelchairs, oxygen concentrators, hospital beds, etc.) to beneficiaries in Kerala, and to record the volunteers who handle each handout and return.
 
 ## 🚀 Key Features
 
-1. **POS-Style Checkout Cart (`/`)**:
-   - Fast, visual product grid with category filtering (Mobility, Respiratory, Comfort, Orthopedic) and tag-based searching.
-   - Quick drawer-based checkouts supporting existing beneficiary selection or new beneficiary registration.
+1. **Give Out (`/`)**:
+   - Fast, visual equipment grid with category filtering and search.
+   - Quick drawer-based checkout supporting existing beneficiary selection or on-the-fly beneficiary registration — no pre-registration required.
 
-2. **Allocations Ledger (`/allocations`)**:
-   - Active distribution tracking list showing expected return dates and real-time status markers (Active, Overdue, Returned).
-   - "Process Return Check-In" dialog to register returns and flag equipment condition status.
+2. **Returns (`/allocations`)**:
+   - Active lending ledger showing expected return dates and real-time status (Active, Overdue, Returned).
+   - Return check-in records the actual return date, the device's condition, and the volunteer who processed it.
 
-3. **Stock & Maintenance Manager (`/inventory`)**:
-   - Dedicated dashboard panel to view, update, and search all assets.
-   - Full CRUD support: Edit model names, categories, asset tags, status (Available, Maintenance, Retired), and condition.
-   - Restores items flagged for `MAINTENANCE` back to `AVAILABLE` status for POS checkout, with safety checks to prevent deleting active leases.
+3. **Admin — Devices (`/inventory`)**:
+   - Dashboard to view, search, and update every registered device.
+   - Edit model names, categories, asset tags, condition, and operational status. Deleting an item is blocked while it is on active loan.
 
-4. **Interactive WhatsApp Integration**:
-   - **WhatsApp Receipt Sharing**: Direct button on the thermal receipt printer page (`/receipt/[id]`) that generates a pre-compiled deep link to share receipt parameters in English and Malayalam.
-   - **WhatsApp Return Reminders**: Deep links on the Allocation Ledger cards to remind patients of active/overdue borrow deadlines.
+4. **Admin — Register a Device (`/add-item`)**:
+   - Records a device's condition (New, Used, Needs Repair) and registration date.
 
-5. **PWA Capability**:
-   - Offline-ready manifest config (`public/manifest.json`) and service worker cache (`public/sw.js`) optimized for poor network environments in remote areas.
+5. **Admin — Volunteers (`/admin/users`)**:
+   - Administrator-only account creation. Volunteers cannot self-register; an admin creates each account and shares the generated initial password over WhatsApp.
+
+6. **Interactive WhatsApp Integration**:
+   - Deep links (no third-party API) to share the printed receipt and to send return reminders, in English and Malayalam (Latin script).
+
+7. **PWA Capability**:
+   - Installable to the home screen, with a cached app shell for fast repeat loads. Data operations (checkout, check-in, inventory changes) require an internet connection.
 
 ---
 
@@ -30,42 +36,66 @@ An industrial-grade, mobile-first Progressive Web Application (PWA) and Point of
 
 - **Core**: Next.js 14 (App Router)
 - **Styling**: Tailwind CSS & Lucide Icons
-- **Database**: Serverless File-Based JSON DB (optimized for Vercel serverless functions)
-- **State Management**: React State with Next.js Server Actions
-
----
-
-## ☁️ Serverless Compatibility (Vercel Optimization)
-
-To handle serverless hosting constraints where the local disk is read-only and stateless:
-- **Writeable `/tmp` Pathing**: Detects Vercel hosting (`process.env.VERCEL === '1'`) and sets the database storage path to `/tmp/db.json` which is writable in serverless runtimes.
-- **Auto-Seeding**: Statically bundles the initial seed data (`data/db.json`) during build. If the active serverless database does not exist in `/tmp`, it is automatically seeded with initial equipment units (wheelchairs, beds, O2 concentrators) and allocation records.
-- This ensures zero filesystem write errors (`EROFS`) and guarantees page loading on serverless hosts.
+- **Auth**: Firebase Authentication (session cookies, admin-created accounts, role-based access)
+- **Database**: Firestore, accessed only from the server via the Firebase Admin SDK
+- **State Management**: React state with Next.js Server Actions
+- **Testing**: Vitest, covering the pure domain rules in `lib/domain/`
 
 ---
 
 ## 💻 Local Setup & Development
 
 ### 1. Prerequisites
+
 - Node.js (v18.x or v20.x recommended)
-- npm (or yarn/pnpm)
+- npm
+- A Firebase project with Authentication (Email/Password provider) and Firestore enabled
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
-### 3. Run Development Server
+### 3. Configure Environment Variables
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in `.env.local` with your Firebase web app config (client SDK) and service account credentials (Admin SDK) — see the comments in `.env.example` for exactly where to find each value in the Firebase console. The same variables must also be added to the Vercel project settings for deployment.
+
+### 4. Create the First Administrator
+
+No account can be created through the app until one exists — an administrator creates every other account. Set the `BOOTSTRAP_ADMIN_*` values in `.env.local`, then run:
+
+```bash
+npm run bootstrap:admin
+```
+
+Sign in with that account, then clear the `BOOTSTRAP_ADMIN_*` values from `.env.local`.
+
+### 5. Run the Development Server
+
 ```bash
 npm run dev
 ```
+
 The application will start on [http://localhost:3000](http://localhost:3000).
 
-### 4. Build for Production
+### 6. Run Tests
+
+```bash
+npm run test:run   # run once
+npm run test       # watch mode
+npm run typecheck  # tsc --noEmit
+```
+
+### 7. Build for Production
+
 ```bash
 npm run build
 ```
-Creates an optimized production bundle inside the `.next` folder.
 
 ---
 
@@ -73,24 +103,35 @@ Creates an optimized production bundle inside the `.next` folder.
 
 ```text
 ├── app/
-│   ├── actions.ts           # Server Actions for DB operations (CRUD)
-│   ├── layout.tsx           # Global Next.js app wrapper & navigation headers
-│   ├── page.tsx             # POS Checkout view
-│   ├── allocations/         # Allocation Ledger view
-│   ├── inventory/           # Stock Manager CRUD view
-│   ├── add-item/            # Item creation form
-│   └── receipt/[id]/        # Thermal printer receipt template & WhatsApp triggers
+│   ├── actions/              # Server Actions, split by entity (items, allocations, users, session)
+│   ├── api/auth/              # Session cookie exchange and logout routes
+│   ├── login/                 # Sign-in page
+│   ├── admin/                 # Admin hub, volunteers, activity log (admin-only)
+│   ├── layout.tsx             # Global app wrapper, navigation headers
+│   ├── page.tsx               # Give Out (checkout) view
+│   ├── allocations/           # Returns ledger view
+│   ├── inventory/             # Device manager (admin-only)
+│   ├── add-item/              # Device registration form (admin-only)
+│   └── receipt/[id]/          # Thermal printer receipt template & WhatsApp triggers
 ├── components/
-│   ├── bottom-nav.tsx       # Elevated mobile dock bottom menu
-│   ├── checkout-cart.tsx    # Slide-out POS checkout drawer form
-│   └── pwa-register.tsx     # PWA Service Worker register hooks
-├── data/
-│   └── db.json              # Source Seed Database (initial stock)
+│   ├── bottom-nav.tsx         # Mobile bottom navigation (role-aware)
+│   ├── desktop-nav.tsx        # Desktop navigation (role-aware)
+│   ├── nav-context.tsx        # Current signed-in user, shared across the app
+│   ├── sign-out-button.tsx    # Sign out control
+│   ├── checkout-cart.tsx      # Slide-out checkout drawer form
+│   └── pwa-register.tsx       # PWA Service Worker registration
 ├── lib/
-│   └── db-service.ts        # Database read, write, and Vercel compatibility service
+│   ├── types.ts               # Client-safe domain types (imports nothing)
+│   ├── domain/                # Pure business rules, unit-tested (condition, allocation, receipt)
+│   ├── firebase/               # Admin SDK (server-only) and client SDK (auth only) singletons
+│   ├── auth/                  # Session cookie helpers and role guards
+│   └── repositories/          # Firestore data access, one file per entity
+├── scripts/
+│   └── bootstrap-admin.ts     # One-time first-administrator creation
 ├── public/
-│   ├── logo.png             # Official KMCC logo graphic
-│   ├── manifest.json        # PWA configuration
-│   └── sw.js                # Offline caching service worker
-└── tsconfig.json            # TypeScript compile configurations
+│   ├── logo.png                # QIDMA logo graphic
+│   ├── manifest.json           # PWA configuration
+│   └── sw.js                   # Offline shell caching service worker
+├── firestore.rules             # Deny-all rules — Firestore is reached only via the Admin SDK
+└── .env.example                # Reference for required environment variables
 ```

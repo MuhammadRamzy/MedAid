@@ -1,7 +1,7 @@
 {
-  "name": "KMCC Charity Medical Inventory & Allocation",
-  "short_name": "KMCC Inventory",
-  "description": "Mobile-first POS Inventory & Allocation Management System for KMCC Kerala Charity",
+  "name": "QIDMA Medical Aid",
+  "short_name": "QIDMA",
+  "description": "Medical equipment lending and inventory — By KMCC Qatar Vanimal Panchayat",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f766e",

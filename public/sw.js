@@ -1,4 +1,4 @@
-const CACHE_NAME = "kmcc-inventory-cache-v2";
+const CACHE_NAME = "qidma-cache-v1";
 const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
