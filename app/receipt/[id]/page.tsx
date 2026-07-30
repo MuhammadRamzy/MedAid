@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AllocationWithRefs } from "@/lib/types";
+import type { AllocationWithRefs, Contribution } from "@/lib/types";
 import { getAllocationsAction } from "@/app/actions/allocations";
+import { getContributionsForAllocationsAction } from "@/app/actions/contributions";
 import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,6 +14,7 @@ export default function ReceiptPage() {
   const rawIdString = params?.id as string;
 
   const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +34,10 @@ export default function ReceiptPage() {
           setError("No matching allocation records found.");
         } else {
           setAllocations(matched);
+          const fetchedContributions = await getContributionsForAllocationsAction(
+            matched.map((a) => a.id)
+          );
+          setContributions(fetchedContributions);
         }
       } catch (err) {
         console.error("Failed to load receipt allocations:", err);
@@ -110,6 +116,7 @@ Thank you for your cooperation!`;
   const dateAllocated = new Date(allocations[0].allocatedAt);
   const receiptNumbers = allocations.map((a) => a.receiptNumber).join(" / ");
   const volunteer = allocations[0].allocatedByName || "QIDMA Volunteer";
+  const totalContribution = contributions.reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -260,6 +267,19 @@ Thank you for your cooperation!`;
               </div>
             ))}
           </div>
+
+          {totalContribution > 0 && (
+            <>
+              <div className="my-3 border-b border-dashed border-black/80" />
+              <div className="space-y-1 text-[10px]">
+                <h3 className="font-black text-[12px] uppercase">CONTRIBUTION RECEIVED</h3>
+                <p className="font-bold">
+                  ₹{totalContribution.toLocaleString("en-IN")} ({contributions[0].method.replace("_", " ")})
+                </p>
+                <p className="text-neutral-600">With thanks for supporting QIDMA Medical Aid.</p>
+              </div>
+            </>
+          )}
 
           <div className="my-4 border-b border-dashed border-black/80" />
 
