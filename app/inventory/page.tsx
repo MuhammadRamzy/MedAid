@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Item, Condition } from "@/lib/types";
 import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions/items";
+import { useCurrentUser } from "@/components/nav-context";
 import {
   Search,
   Wrench,
@@ -41,6 +42,8 @@ export default function InventoryPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const { user, loading: loadingSession } = useCurrentUser();
 
   const loadItems = async () => {
     setLoading(true);
@@ -185,6 +188,15 @@ export default function InventoryPage() {
         );
     }
   };
+
+  if (loadingSession) return null;
+  if (user?.role !== "admin") {
+    return (
+      <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        This area is for administrators.
+      </p>
+    );
+  }
 
   if (loading) {
     return (

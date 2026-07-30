@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { createItemAction } from "@/app/actions/items";
 import type { Condition } from "@/lib/types";
+import { useCurrentUser } from "@/components/nav-context";
 import { PlusCircle, Tag, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AddItemPage() {
   const router = useRouter();
+  const { user, loading: loadingSession } = useCurrentUser();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Mobility");
   const [assetTag, setAssetTag] = useState("");
@@ -96,6 +98,15 @@ export default function AddItemPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (loadingSession) return null;
+  if (user?.role !== "admin") {
+    return (
+      <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        This area is for administrators.
+      </p>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6 animate-page">
