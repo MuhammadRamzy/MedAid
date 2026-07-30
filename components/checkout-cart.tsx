@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Item, Beneficiary } from "@/lib/types";
-import { createBeneficiaryAction, createAllocationAction } from "@/app/actions";
+import { createAllocationAction } from "@/app/actions/allocations";
 import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, Loader2, ChevronsRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -162,7 +162,6 @@ interface CheckoutCartProps {
   isOpen: boolean;
   onClose: () => void;
   beneficiaries: Beneficiary[];
-  onRefreshBeneficiaries: () => void;
 }
 
 export function CheckoutCart({
@@ -172,7 +171,6 @@ export function CheckoutCart({
   isOpen,
   onClose,
   beneficiaries,
-  onRefreshBeneficiaries,
 }: CheckoutCartProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -181,12 +179,11 @@ export function CheckoutCart({
   // Form states
   const [beneficiaryMode, setBeneficiaryMode] = useState<"existing" | "new">("existing");
   const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string>("");
-  
+
   // New Beneficiary Form
   const [newBenName, setNewBenName] = useState("");
   const [newBenPhone, setNewBenPhone] = useState("+91");
   const [newBenAddress, setNewBenAddress] = useState("");
-  const [newBenVolunteer, setNewBenVolunteer] = useState("");
 
   // Allocation Form
   const [expectedReturnDate, setExpectedReturnDate] = useState("");
@@ -222,45 +219,39 @@ export function CheckoutCart({
     setError(null);
 
     try {
-      let beneficiaryId = selectedBeneficiaryId;
-
-      // 1. Create beneficiary if in "new" mode
-      if (beneficiaryMode === "new") {
-        if (!newBenName.trim() || !newBenPhone.trim() || !newBenAddress.trim() || !newBenVolunteer.trim()) {
-          throw new Error("Please fill in all beneficiary fields.");
-        }
-        
-        const benRes = await createBeneficiaryAction({
-          name: newBenName.trim(),
-          phone: newBenPhone.trim(),
-          address: newBenAddress.trim(),
-          volunteerInCharge: newBenVolunteer.trim(),
-        });
-
-        if (!benRes.success || !benRes.beneficiary) {
-          throw new Error(benRes.error || "Failed to register beneficiary.");
-        }
-
-        beneficiaryId = benRes.beneficiary.id;
-        onRefreshBeneficiaries();
+      if (beneficiaryMode === "existing" && !selectedBeneficiaryId) {
+        throw new Error("Please select a beneficiary.");
+      }
+      if (
+        beneficiaryMode === "new" &&
+        (!newBenName.trim() || !newBenPhone.trim() || !newBenAddress.trim())
+      ) {
+        throw new Error("Please fill in all beneficiary fields.");
       }
 
-      if (!beneficiaryId) {
-        throw new Error("Please select or create a beneficiary.");
-      }
+      // Beneficiary creation (when new) happens inside createAllocationAction,
+      // deduplicated by phone number. Repeat items in the cart therefore
+      // resolve to the same beneficiary record rather than creating one each.
+      const beneficiaryPayload =
+        beneficiaryMode === "existing"
+          ? { id: selectedBeneficiaryId, name: "", phone: "", address: "" }
+          : {
+              name: newBenName.trim(),
+              phone: newBenPhone.trim(),
+              address: newBenAddress.trim(),
+            };
 
-      // 2. Process allocations for all items in the cart
       const allocationIds: string[] = [];
       for (const item of cartItems) {
         const allocRes = await createAllocationAction({
           itemId: item.id,
-          beneficiaryId,
+          beneficiary: beneficiaryPayload,
           expectedReturnAt: new Date(expectedReturnDate).toISOString(),
           notes: notes.trim(),
         });
 
         if (!allocRes.success || !allocRes.allocation) {
-          throw new Error(allocRes.error || `Failed to allocate ${item.name}`);
+          throw new Error(allocRes.error || `Could not give out ${item.name}`);
         }
         allocationIds.push(allocRes.allocation.id);
       }
@@ -433,17 +424,6 @@ export function CheckoutCart({
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-muted-foreground">KMCC Volunteer In Charge</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBenVolunteer}
-                    onChange={(e) => setNewBenVolunteer(e.target.value)}
-                    placeholder="e.g. Faisal P.K."
-                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
               </div>
             )}
           </div>

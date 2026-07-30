@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createItemAction } from "@/app/actions";
+import { createItemAction } from "@/app/actions/items";
+import type { Condition } from "@/lib/types";
 import { PlusCircle, Tag, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,7 @@ export default function AddItemPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Mobility");
   const [assetTag, setAssetTag] = useState("");
-  const [conditionOnCheckIn, setConditionOnCheckIn] = useState("Good");
+  const [condition, setCondition] = useState<Condition>("New");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -40,8 +41,8 @@ export default function AddItemPage() {
         name: name.trim(),
         category,
         assetTag: assetTag.trim().toUpperCase(),
-        conditionOnCheckIn,
-        status: "AVAILABLE",
+        condition,
+        registeredAt: new Date().toISOString(),
       });
 
       if (!res.success) {
@@ -88,7 +89,7 @@ export default function AddItemPage() {
           <div>
             <h4 className="text-sm font-bold">Equipment Registered Successfully</h4>
             <p className="text-xs text-emerald-600 mt-0.5">
-              The item has been added to the catalog and is immediately available for allocation.
+              The item has been added to the catalog{condition === "Needs Repair" ? " and held in maintenance until it is fixed." : " and is immediately available for lending."}
             </p>
           </div>
         </div>
@@ -167,14 +168,13 @@ export default function AddItemPage() {
           <div className="space-y-1">
             <label className="text-xs font-bold text-muted-foreground">Condition</label>
             <select
-              value={conditionOnCheckIn}
-              onChange={(e) => setConditionOnCheckIn(e.target.value)}
+              value={condition}
+              onChange={(e) => setCondition(e.target.value as Condition)}
               className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="Excellent">Excellent (New / Barely Used)</option>
-              <option value="Good">Good (Working, minor signs of wear)</option>
-              <option value="Fair">Fair (Working, notable wear/aging)</option>
-              <option value="Needs Repair">Needs Repair (Needs maintenance before lease)</option>
+              <option value="New">New (Unused)</option>
+              <option value="Used">Used (Working, in service before)</option>
+              <option value="Needs Repair">Needs Repair (Held back for maintenance)</option>
             </select>
           </div>
 

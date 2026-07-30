@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Item, Beneficiary, AllocationWithRefs } from "@/lib/types";
-import { getItemsAction, getBeneficiariesAction, getAllocationsAction } from "@/app/actions";
+import { getItemsAction } from "@/app/actions/items";
+import { getBeneficiariesAction, getAllocationsAction } from "@/app/actions/allocations";
 import { CheckoutCart } from "@/components/checkout-cart";
 import { 
   Search, 
@@ -288,7 +289,7 @@ export default function PosDashboard() {
                   {/* Action/Indicator footer */}
                   <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
                     <span className="text-xs text-muted-foreground">
-                      Condition: <strong className="text-foreground">{item.conditionOnCheckIn}</strong>
+                      Condition: <strong className="text-foreground">{item.condition}</strong>
                     </span>
 
                     {isAvailable && (
@@ -337,7 +338,6 @@ export default function PosDashboard() {
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
           beneficiaries={beneficiaries}
-          onRefreshBeneficiaries={loadData}
         />,
         document.body
       )}

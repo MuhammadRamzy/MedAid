@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Item } from "@/lib/types";
-import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions";
+import { Item, Condition } from "@/lib/types";
+import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions/items";
 import {
   Search,
   Wrench,
@@ -35,7 +35,7 @@ export default function InventoryPage() {
   const [editAssetTag, setEditAssetTag] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editStatus, setEditStatus] = useState<Item["status"]>("AVAILABLE");
-  const [editCondition, setEditCondition] = useState("");
+  const [editCondition, setEditCondition] = useState<Condition>("Good");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export default function InventoryPage() {
     setEditAssetTag(item.assetTag);
     setEditCategory(item.category);
     setEditStatus(item.status);
-    setEditCondition(item.conditionOnCheckIn);
+    setEditCondition(item.condition);
     setEditError(null);
     setEditSuccess(false);
   };
@@ -88,7 +88,7 @@ export default function InventoryPage() {
         assetTag: editAssetTag,
         category: editCategory,
         status: editStatus,
-        conditionOnCheckIn: editCondition,
+        condition: editCondition,
       });
 
       if (result.success) {
@@ -319,7 +319,7 @@ export default function InventoryPage() {
 
                 <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs">
                   <span className="text-muted-foreground">
-                    Condition: <strong className="text-foreground">{item.conditionOnCheckIn}</strong>
+                    Condition: <strong className="text-foreground">{item.condition}</strong>
                   </span>
                   
                   <button
@@ -450,16 +450,24 @@ export default function InventoryPage() {
                 {/* Condition input */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Condition Description
+                    Condition
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={editCondition}
-                    onChange={(e) => setEditCondition(e.target.value)}
-                    placeholder="e.g. Good, Excellent, Punctured Tire"
+                    onChange={(e) => setEditCondition(e.target.value as Condition)}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+                  >
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Needs Repair">Needs Repair (Move to Maintenance)</option>
+                    <option value="Retired">Retired (Damaged beyond repair)</option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    * Condition and operational status are set independently here — update both if a repair changes the device&apos;s status.
+                  </p>
                 </div>
 
                 {/* Actions: Save / Cancel */}
