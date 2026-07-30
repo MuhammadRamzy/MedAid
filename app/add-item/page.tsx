@@ -1,18 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { createItemAction } from "@/app/actions";
+import { createItemAction } from "@/app/actions/items";
+import type { Condition } from "@/lib/types";
+import { useCurrentUser } from "@/components/nav-context";
 import { PlusCircle, Tag, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AddItemPage() {
   const router = useRouter();
+  const { user, loading: loadingSession } = useCurrentUser();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Mobility");
   const [assetTag, setAssetTag] = useState("");
-  const [conditionOnCheckIn, setConditionOnCheckIn] = useState("Good");
-  
+  const [condition, setCondition] = useState<Condition>("New");
+
+  type AcquisitionSource = "purchase" | "donation" | null;
+  const [acquisitionSource, setAcquisitionSource] = useState<AcquisitionSource>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [price, setPrice] = useState("");
+  const [sourceOfFund, setSourceOfFund] = useState("");
+  const [contributorName, setContributorName] = useState("");
+  const [estimatedValue, setEstimatedValue] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,18 +42,38 @@ export default function AddItemPage() {
       setError("Please fill in all required fields.");
       return;
     }
+    if (!acquisitionSource) {
+      setError("Please choose whether this device was purchased or donated.");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
+
+    const acquisition =
+      acquisitionSource === "purchase"
+        ? {
+            source: "purchase" as const,
+            invoiceNumber: invoiceNumber.trim(),
+            supplier: supplier.trim(),
+            price: Number(price),
+            sourceOfFund: sourceOfFund.trim(),
+          }
+        : {
+            source: "donation" as const,
+            contributorName: contributorName.trim(),
+            estimatedValue: estimatedValue.trim() ? Number(estimatedValue) : null,
+          };
 
     try {
       const res = await createItemAction({
         name: name.trim(),
         category,
         assetTag: assetTag.trim().toUpperCase(),
-        conditionOnCheckIn,
-        status: "AVAILABLE",
+        condition,
+        registeredAt: new Date().toISOString(),
+        acquisition,
       });
 
       if (!res.success) {
@@ -51,6 +83,13 @@ export default function AddItemPage() {
       setSuccess(true);
       setName("");
       setAssetTag("");
+      setAcquisitionSource(null);
+      setInvoiceNumber("");
+      setSupplier("");
+      setPrice("");
+      setSourceOfFund("");
+      setContributorName("");
+      setEstimatedValue("");
       // Refresh router so catalog is updated
       router.refresh();
     } catch (err: unknown) {
@@ -59,6 +98,15 @@ export default function AddItemPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (loadingSession) return null;
+  if (user?.role !== "admin") {
+    return (
+      <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        This area is for administrators.
+      </p>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6 animate-page">
@@ -88,7 +136,7 @@ export default function AddItemPage() {
           <div>
             <h4 className="text-sm font-bold">Equipment Registered Successfully</h4>
             <p className="text-xs text-emerald-600 mt-0.5">
-              The item has been added to the catalog and is immediately available for allocation.
+              The item has been added to the catalog{condition === "Needs Repair" ? " and held in maintenance until it is fixed." : " and is immediately available for lending."}
             </p>
           </div>
         </div>
@@ -167,16 +215,123 @@ export default function AddItemPage() {
           <div className="space-y-1">
             <label className="text-xs font-bold text-muted-foreground">Condition</label>
             <select
-              value={conditionOnCheckIn}
-              onChange={(e) => setConditionOnCheckIn(e.target.value)}
+              value={condition}
+              onChange={(e) => setCondition(e.target.value as Condition)}
               className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="Excellent">Excellent (New / Barely Used)</option>
-              <option value="Good">Good (Working, minor signs of wear)</option>
-              <option value="Fair">Fair (Working, notable wear/aging)</option>
-              <option value="Needs Repair">Needs Repair (Needs maintenance before lease)</option>
+              <option value="New">New (Unused)</option>
+              <option value="Used">Used (Working, in service before)</option>
+              <option value="Needs Repair">Needs Repair (Held back for maintenance)</option>
             </select>
           </div>
+
+          {/* Acquisition Source */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-muted-foreground">How was this device acquired?</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAcquisitionSource("purchase")}
+                className={`rounded-xl border px-4 py-3 text-sm font-bold transition-all ${
+                  acquisitionSource === "purchase"
+                    ? "border-primary bg-teal-50 text-primary shadow-sm"
+                    : "border-border bg-card text-muted-foreground hover:border-teal-300"
+                }`}
+              >
+                Purchased
+              </button>
+              <button
+                type="button"
+                onClick={() => setAcquisitionSource("donation")}
+                className={`rounded-xl border px-4 py-3 text-sm font-bold transition-all ${
+                  acquisitionSource === "donation"
+                    ? "border-primary bg-teal-50 text-primary shadow-sm"
+                    : "border-border bg-card text-muted-foreground hover:border-teal-300"
+                }`}
+              >
+                Donated
+              </button>
+            </div>
+          </div>
+
+          {acquisitionSource === "purchase" && (
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Invoice Number</label>
+                <input
+                  type="text"
+                  required
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  placeholder="e.g. INV-2026-0142"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Supplier</label>
+                <input
+                  type="text"
+                  required
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                  placeholder="e.g. Kerala Medical Supplies"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Price (INR)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="e.g. 12500"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Source of Fund</label>
+                <input
+                  type="text"
+                  required
+                  value={sourceOfFund}
+                  onChange={(e) => setSourceOfFund(e.target.value)}
+                  placeholder="e.g. General Fund, Zakat Fund"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+          )}
+
+          {acquisitionSource === "donation" && (
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Contributor Name</label>
+                <input
+                  type="text"
+                  required
+                  value={contributorName}
+                  onChange={(e) => setContributorName(e.target.value)}
+                  placeholder="e.g. Anonymous Donor, or a name"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground">Estimated Value (INR, optional)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={estimatedValue}
+                  onChange={(e) => setEstimatedValue(e.target.value)}
+                  placeholder="e.g. 8000"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <button

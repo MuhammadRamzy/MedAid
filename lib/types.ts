@@ -1,0 +1,89 @@
+import type { Condition, ItemStatus } from "@/lib/domain/condition";
+import type { AllocationStatus, DerivedAllocationStatus } from "@/lib/domain/allocation";
+import type { Acquisition } from "@/lib/domain/acquisition";
+import type { ContributionInput, ContributionMethod, ContributionStage } from "@/lib/domain/contribution";
+
+export type {
+  Condition,
+  ItemStatus,
+  AllocationStatus,
+  DerivedAllocationStatus,
+  Acquisition,
+  ContributionInput,
+  ContributionMethod,
+  ContributionStage,
+};
+
+export type UserRole = "admin" | "volunteer";
+
+export interface Item {
+  id: string;
+  assetTag: string;
+  name: string;
+  category: string;
+  status: ItemStatus;
+  condition: Condition;
+  currentAllocationId: string | null;
+  registeredAt: string;
+  acquisition: Acquisition;
+}
+
+export interface Beneficiary {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+}
+
+export interface Allocation {
+  id: string;
+  itemId: string;
+  beneficiaryId: string;
+  allocatedAt: string;
+  allocatedBy: string;
+  expectedReturnAt: string;
+  actualReturnedAt: string | null;
+  checkedInBy: string | null;
+  conditionOnReturn: Condition | null;
+  status: AllocationStatus;
+  notes: string;
+  receiptNumber: string;
+}
+
+export interface AllocationWithRefs extends Omit<Allocation, "status"> {
+  status: DerivedAllocationStatus;
+  item?: Item;
+  beneficiary?: Beneficiary;
+  allocatedByName?: string;
+  checkedInByName?: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  name: string;
+  mobile: string;
+  email: string;
+  role: UserRole;
+  disabled: boolean;
+  createdAt: string;
+  createdBy: string;
+  lastLoginAt: string | null;
+}
+
+export interface SessionUser {
+  uid: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface Contribution {
+  id: string;
+  beneficiaryId: string;
+  allocationId: string;
+  stage: ContributionStage;
+  amount: number;
+  method: ContributionMethod;
+  reference: string;
+  collectedBy: string;
+  collectedAt: string;
+}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Allocation, Item, Beneficiary } from "@/lib/db-service";
-import { getAllocationsAction } from "@/app/actions";
+import type { AllocationWithRefs, Contribution } from "@/lib/types";
+import { getAllocationsAction } from "@/app/actions/allocations";
+import { getContributionsForAllocationsAction } from "@/app/actions/contributions";
 import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,9 +13,8 @@ export default function ReceiptPage() {
   const params = useParams();
   const rawIdString = params?.id as string;
 
-  const [allocations, setAllocations] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary })[]
-  >([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +34,10 @@ export default function ReceiptPage() {
           setError("No matching allocation records found.");
         } else {
           setAllocations(matched);
+          const fetchedContributions = await getContributionsForAllocationsAction(
+            matched.map((a) => a.id)
+          );
+          setContributions(fetchedContributions);
         }
       } catch (err) {
         console.error("Failed to load receipt allocations:", err);
@@ -63,7 +67,8 @@ export default function ReceiptPage() {
       year: "numeric"
     });
     
-    const text = `*KMCC CHARITY MEDICAL HELP WING*
+    const text = `*QIDMA MEDICAL AID*
+By KMCC Qatar Vanimal Panchayat
 ----------------------------------------
 *Receipt Number:* ${receiptNumbers}
 *Date:* ${dateAllocated.toLocaleDateString("en-IN")}
@@ -75,7 +80,7 @@ ${itemsText}
 
 *Expected Return Date:* ${returnDate}
 
-_Priya ${beneficiary.name}, KMCC Medical Help Wing-il ninnu nalkiya upakaranam expected date aagumbol thirichu elpikkan thalcharyappedunnu. Nandi._
+_Priya ${beneficiary.name}, QIDMA Medical Aid-il ninnu nalkiya upakaranam expected date aagumbol thirichu elpikkan thalcharyappedunnu. Nandi._
 
 Thank you for your cooperation!`;
 
@@ -110,7 +115,8 @@ Thank you for your cooperation!`;
   const beneficiary = allocations[0].beneficiary;
   const dateAllocated = new Date(allocations[0].allocatedAt);
   const receiptNumbers = allocations.map((a) => a.receiptNumber).join(" / ");
-  const volunteer = beneficiary?.volunteerInCharge || "KMCC Volunteer";
+  const volunteer = allocations[0].allocatedByName || "QIDMA Volunteer";
+  const totalContribution = contributions.reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -186,19 +192,15 @@ Thank you for your cooperation!`;
             <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full mb-2">
               <Image
                 src="/logo.png"
-                alt="KMCC Logo"
+                alt="QIDMA Medical Aid"
                 fill
                 sizes="80px"
                 className="object-cover grayscale"
               />
             </div>
-            <h2 className="text-sm font-black uppercase tracking-tight">K.M.C.C. CHARITY</h2>
+            <h2 className="text-sm font-black uppercase tracking-tight">QIDMA MEDICAL AID</h2>
             <p className="text-[9px] font-bold uppercase tracking-wider text-neutral-600">
-              Medical Help Equipment Wing
-            </p>
-            <p className="text-[8px] text-neutral-500 leading-normal">
-              State Committee Chapter, Kerala, India<br />
-              Ph: +91 484 2345678 | Web: kmcccharity.org
+              By KMCC Qatar Vanimal Panchayat
             </p>
           </div>
 
@@ -249,7 +251,7 @@ Thank you for your cooperation!`;
                 </div>
                 <div className="flex justify-between text-[10px] text-neutral-600">
                   <span>Tag: {alloc.item?.assetTag}</span>
-                  <span>Cond: {alloc.item?.conditionOnCheckIn}</span>
+                  <span>Cond: {alloc.item?.condition}</span>
                 </div>
                 <div className="flex justify-between text-[10px] text-neutral-700">
                   <span>Category: {alloc.item?.category}</span>
@@ -266,6 +268,19 @@ Thank you for your cooperation!`;
             ))}
           </div>
 
+          {totalContribution > 0 && (
+            <>
+              <div className="my-3 border-b border-dashed border-black/80" />
+              <div className="space-y-1 text-[10px]">
+                <h3 className="font-black text-[12px] uppercase">CONTRIBUTION RECEIVED</h3>
+                <p className="font-bold">
+                  ₹{totalContribution.toLocaleString("en-IN")} ({contributions[0].method.replace("_", " ")})
+                </p>
+                <p className="text-neutral-600">With thanks for supporting QIDMA Medical Aid.</p>
+              </div>
+            </>
+          )}
+
           <div className="my-4 border-b border-dashed border-black/80" />
 
           {/* Terms & Undertaking */}
@@ -278,7 +293,7 @@ Thank you for your cooperation!`;
               2. I promise to return the equipment in a clean, sanitized, and working condition on or before the expected return date.
             </p>
             <p>
-              3. In case of damage or issues, I will inform the KMCC volunteer in charge immediately.
+              3. In case of damage or issues, I will inform the QIDMA volunteer in charge immediately.
             </p>
           </div>
 
@@ -292,7 +307,7 @@ Thank you for your cooperation!`;
             </div>
             <div className="text-center space-y-5">
               <div className="w-16 border-b border-black/80 mx-auto" />
-              <span>For KMCC</span>
+              <span>For QIDMA</span>
             </div>
           </div>
 

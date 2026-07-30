@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Item, Beneficiary } from "@/lib/db-service";
-import { createBeneficiaryAction, createAllocationAction } from "@/app/actions";
-import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, Loader2, ChevronsRight } from "lucide-react";
+import { Item, Beneficiary } from "@/lib/types";
+import { createAllocationAction } from "@/app/actions/allocations";
+import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, Loader2, ChevronsRight, HeartHandshake } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface SlideToConfirmProps {
@@ -162,7 +162,6 @@ interface CheckoutCartProps {
   isOpen: boolean;
   onClose: () => void;
   beneficiaries: Beneficiary[];
-  onRefreshBeneficiaries: () => void;
 }
 
 export function CheckoutCart({
@@ -172,7 +171,6 @@ export function CheckoutCart({
   isOpen,
   onClose,
   beneficiaries,
-  onRefreshBeneficiaries,
 }: CheckoutCartProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -181,16 +179,21 @@ export function CheckoutCart({
   // Form states
   const [beneficiaryMode, setBeneficiaryMode] = useState<"existing" | "new">("existing");
   const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string>("");
-  
+
   // New Beneficiary Form
   const [newBenName, setNewBenName] = useState("");
   const [newBenPhone, setNewBenPhone] = useState("+91");
   const [newBenAddress, setNewBenAddress] = useState("");
-  const [newBenVolunteer, setNewBenVolunteer] = useState("");
 
   // Allocation Form
   const [expectedReturnDate, setExpectedReturnDate] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Beneficiary Contribution (optional, collapsed by default)
+  const [showContribution, setShowContribution] = useState(false);
+  const [contributionAmount, setContributionAmount] = useState("");
+  const [contributionMethod, setContributionMethod] = useState<"cash" | "upi" | "bank_transfer">("cash");
+  const [contributionReference, setContributionReference] = useState("");
 
   // Set default expected return date to 30 days from now
   useEffect(() => {
@@ -222,50 +225,62 @@ export function CheckoutCart({
     setError(null);
 
     try {
-      let beneficiaryId = selectedBeneficiaryId;
-
-      // 1. Create beneficiary if in "new" mode
-      if (beneficiaryMode === "new") {
-        if (!newBenName.trim() || !newBenPhone.trim() || !newBenAddress.trim() || !newBenVolunteer.trim()) {
-          throw new Error("Please fill in all beneficiary fields.");
-        }
-        
-        const benRes = await createBeneficiaryAction({
-          name: newBenName.trim(),
-          phone: newBenPhone.trim(),
-          address: newBenAddress.trim(),
-          volunteerInCharge: newBenVolunteer.trim(),
-        });
-
-        if (!benRes.success || !benRes.beneficiary) {
-          throw new Error(benRes.error || "Failed to register beneficiary.");
-        }
-
-        beneficiaryId = benRes.beneficiary.id;
-        onRefreshBeneficiaries();
+      if (beneficiaryMode === "existing" && !selectedBeneficiaryId) {
+        throw new Error("Please select a beneficiary.");
+      }
+      if (
+        beneficiaryMode === "new" &&
+        (!newBenName.trim() || !newBenPhone.trim() || !newBenAddress.trim())
+      ) {
+        throw new Error("Please fill in all beneficiary fields.");
       }
 
-      if (!beneficiaryId) {
-        throw new Error("Please select or create a beneficiary.");
-      }
+      // Beneficiary creation (when new) happens inside createAllocationAction,
+      // deduplicated by phone number. Repeat items in the cart therefore
+      // resolve to the same beneficiary record rather than creating one each.
+      const beneficiaryPayload =
+        beneficiaryMode === "existing"
+          ? { id: selectedBeneficiaryId, name: "", phone: "", address: "" }
+          : {
+              name: newBenName.trim(),
+              phone: newBenPhone.trim(),
+              address: newBenAddress.trim(),
+            };
 
-      // 2. Process allocations for all items in the cart
+      // A contribution belongs to the beneficiary's visit, not to any one
+      // item — it is attached only to the first allocation created, so
+      // adding several items to the cart never records the same money twice.
+      const contributionPayload =
+        showContribution && contributionAmount.trim()
+          ? {
+              amount: Number(contributionAmount),
+              method: contributionMethod,
+              reference: contributionReference.trim(),
+            }
+          : undefined;
+
       const allocationIds: string[] = [];
-      for (const item of cartItems) {
+      for (let index = 0; index < cartItems.length; index++) {
+        const item = cartItems[index];
         const allocRes = await createAllocationAction({
           itemId: item.id,
-          beneficiaryId,
+          beneficiary: beneficiaryPayload,
           expectedReturnAt: new Date(expectedReturnDate).toISOString(),
           notes: notes.trim(),
+          contribution: index === 0 ? contributionPayload : undefined,
         });
 
         if (!allocRes.success || !allocRes.allocation) {
-          throw new Error(allocRes.error || `Failed to allocate ${item.name}`);
+          throw new Error(allocRes.error || `Could not give out ${item.name}`);
         }
         allocationIds.push(allocRes.allocation.id);
       }
 
       // 3. Success -> Clear Cart, Close, and Redirect to receipt print page
+      setShowContribution(false);
+      setContributionAmount("");
+      setContributionMethod("cash");
+      setContributionReference("");
       onClearCart();
       onClose();
       router.push(`/receipt/${allocationIds.join(",")}`);
@@ -433,17 +448,6 @@ export function CheckoutCart({
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-muted-foreground">KMCC Volunteer In Charge</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBenVolunteer}
-                    onChange={(e) => setNewBenVolunteer(e.target.value)}
-                    placeholder="e.g. Faisal P.K."
-                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
               </div>
             )}
           </div>
@@ -479,6 +483,77 @@ export function CheckoutCart({
                 className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
+          </div>
+
+          {/* Beneficiary Contribution (optional, collapsed by default) */}
+          <div className="space-y-3">
+            {!showContribution ? (
+              <button
+                type="button"
+                onClick={() => setShowContribution(true)}
+                className="flex items-center space-x-1.5 text-sm font-semibold text-teal-700 hover:text-teal-800"
+              >
+                <HeartHandshake className="h-4 w-4" />
+                <span>Add contribution (optional)</span>
+              </button>
+            ) : (
+              <div className="space-y-3 rounded-xl border border-border p-4 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <HeartHandshake className="h-3.5 w-3.5 text-teal-700" />
+                    <span>Beneficiary Contribution</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowContribution(false);
+                      setContributionAmount("");
+                      setContributionReference("");
+                    }}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-muted-foreground">Amount (INR)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={contributionAmount}
+                    onChange={(e) => setContributionAmount(e.target.value)}
+                    placeholder="e.g. 500"
+                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-muted-foreground">Payment Method</label>
+                  <select
+                    value={contributionMethod}
+                    onChange={(e) => setContributionMethod(e.target.value as "cash" | "upi" | "bank_transfer")}
+                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-muted-foreground">Reference (optional)</label>
+                  <input
+                    type="text"
+                    value={contributionReference}
+                    onChange={(e) => setContributionReference(e.target.value)}
+                    placeholder="e.g. UPI transaction ID"
+                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Allocation, Item, Beneficiary } from "@/lib/db-service";
-import { getAllocationsAction, returnAllocationAction } from "@/app/actions";
+import { AllocationWithRefs, Condition, DerivedAllocationStatus } from "@/lib/types";
+import { RETURN_CONDITIONS } from "@/lib/domain/condition";
+import { getAllocationsAction, returnAllocationAction } from "@/app/actions/allocations";
 import { 
   Search, 
   Calendar, 
@@ -19,18 +20,14 @@ import {
 import Link from "next/link";
 
 export default function AllocationsPage() {
-  const [allocations, setAllocations] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary })[]
-  >([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "OVERDUE" | "RETURNED">("ACTIVE");
 
   // Return Modal State
-  const [selectedAlloc, setSelectedAlloc] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary }) | null
-  >(null);
-  const [conditionOnCheckIn, setConditionOnCheckIn] = useState("Good");
+  const [selectedAlloc, setSelectedAlloc] = useState<AllocationWithRefs | null>(null);
+  const [conditionOnReturn, setConditionOnReturn] = useState<Condition>("Good");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,11 +70,20 @@ export default function AllocationsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleOpenReturnModal = (
-    alloc: Allocation & { item?: Item; beneficiary?: Beneficiary }
-  ) => {
+  const handleOpenReturnModal = (alloc: AllocationWithRefs) => {
     setSelectedAlloc(alloc);
-    setConditionOnCheckIn(alloc.item?.conditionOnCheckIn || "Good");
+    // A device's condition at registration can be "New" or "Used" — values
+    // that aren't offered in this return dropdown (Good/Fair/Needs
+    // Repair/Retired). Falling back to those directly would set the select's
+    // value to an option that doesn't exist, so the dropdown would visually
+    // show "Good" while actually submitting the item's stale registration
+    // condition. Only pre-fill from the item's current condition when it's
+    // already a valid return condition (e.g. this device has been returned
+    // and re-lent before); otherwise default cleanly to "Good".
+    const current = alloc.item?.condition;
+    setConditionOnReturn(
+      current && RETURN_CONDITIONS.includes(current) ? current : "Good"
+    );
     setError(null);
   };
 
@@ -95,7 +101,8 @@ export default function AllocationsPage() {
     try {
       const res = await returnAllocationAction({
         allocationId: selectedAlloc.id,
-        conditionOnCheckIn,
+        conditionOnReturn,
+        actualReturnedAt: new Date().toISOString(),
       });
 
       if (!res.success) {
@@ -111,7 +118,7 @@ export default function AllocationsPage() {
     }
   };
 
-  const getStatusBadge = (status: Allocation["status"]) => {
+  const getStatusBadge = (status: DerivedAllocationStatus) => {
     switch (status) {
       case "ACTIVE":
         return (
@@ -134,9 +141,7 @@ export default function AllocationsPage() {
     }
   };
 
-  const getReminderWhatsAppUrl = (
-    alloc: Allocation & { item?: Item; beneficiary?: Beneficiary }
-  ) => {
+  const getReminderWhatsAppUrl = (alloc: AllocationWithRefs) => {
     if (!alloc.beneficiary || !alloc.item) return "#";
     const cleanPhone = alloc.beneficiary.phone.replace(/\D/g, "");
     
@@ -148,19 +153,21 @@ export default function AllocationsPage() {
     
     let text = "";
     if (alloc.status === "OVERDUE") {
-      text = `*KMCC CHARITY MEDICAL HELP WING - OVERDUE RETURN REMINDER*
+      text = `*QIDMA MEDICAL AID - OVERDUE RETURN REMINDER*
+By KMCC Qatar Vanimal Panchayat
 --------------------------------------------------
 Dear ${alloc.beneficiary.name},
 
 This is a friendly reminder that the *${alloc.item.name}* (Asset Tag: ${alloc.item.assetTag}) you borrowed on ${new Date(alloc.allocatedAt).toLocaleDateString("en-IN")} was expected to be returned by *${returnDate}*.
 
-Please return the equipment to the KMCC desk at your earliest convenience so it can be serviced and distributed to other patients in need.
+Please return the equipment to the QIDMA desk at your earliest convenience so it can be serviced and distributed to other patients in need.
 
-If you have any questions, please contact the volunteer in charge: ${alloc.beneficiary.volunteerInCharge}.
+If you have any questions, please contact the volunteer in charge: ${alloc.allocatedByName || "our team"}.
 
 Thank you.`;
     } else {
-      text = `*KMCC CHARITY MEDICAL HELP WING - LEASE STATUS*
+      text = `*QIDMA MEDICAL AID - LEASE STATUS*
+By KMCC Qatar Vanimal Panchayat
 --------------------------------------------------
 Dear ${alloc.beneficiary.name},
 
@@ -170,7 +177,7 @@ This is to confirm that you have an active distribution of *${alloc.item.name}* 
 
 Please ensure the equipment is returned in clean, sanitised condition by the due date.
 
-For assistance, contact Faisal/Shaji or your volunteer in charge: ${alloc.beneficiary.volunteerInCharge}.
+For assistance, contact your volunteer in charge: ${alloc.allocatedByName || "our team"}.
 
 Thank you.`;
     }
@@ -368,11 +375,19 @@ Thank you.`;
                         &ldquo;{alloc.notes || "No notes added"}&rdquo;
                       </p>
                       <p className="mt-2 text-muted-foreground">
-                        Volunteer in charge:{" "}
+                        Given out by:{" "}
                         <strong className="text-foreground font-semibold">
-                          {alloc.beneficiary?.volunteerInCharge}
+                          {alloc.allocatedByName || "—"}
                         </strong>
                       </p>
+                      {alloc.checkedInByName && (
+                        <p className="text-muted-foreground">
+                          Checked in by:{" "}
+                          <strong className="text-foreground font-semibold">
+                            {alloc.checkedInByName}
+                          </strong>
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -434,11 +449,10 @@ Thank you.`;
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground">Condition on Check-In</label>
                 <select
-                  value={conditionOnCheckIn}
-                  onChange={(e) => setConditionOnCheckIn(e.target.value)}
+                  value={conditionOnReturn}
+                  onChange={(e) => setConditionOnReturn(e.target.value as Condition)}
                   className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="Excellent">Excellent (Like New)</option>
                   <option value="Good">Good (Working, minor wear)</option>
                   <option value="Fair">Fair (Working, notable wear)</option>
                   <option value="Needs Repair">Needs Repair (Move to Maintenance)</option>

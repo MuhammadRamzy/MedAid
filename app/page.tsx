@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Item, Beneficiary, Allocation } from "@/lib/db-service";
-import { getItemsAction, getBeneficiariesAction, getAllocationsAction } from "@/app/actions";
+import { Item, Beneficiary, AllocationWithRefs } from "@/lib/types";
+import { getItemsAction } from "@/app/actions/items";
+import { getBeneficiariesAction, getAllocationsAction } from "@/app/actions/allocations";
 import { CheckoutCart } from "@/components/checkout-cart";
 import { 
   Search, 
@@ -23,7 +24,7 @@ export default function PosDashboard() {
   // DB States
   const [items, setItems] = useState<Item[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [allocations, setAllocations] = useState<(Allocation & { item?: Item; beneficiary?: Beneficiary })[]>([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Cart State
@@ -35,6 +36,7 @@ export default function PosDashboard() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [showAllStatuses, setShowAllStatuses] = useState(false);
 
   const categories = ["All", "Mobility", "Respiratory", "Comfort", "Orthopedic"];
 
@@ -67,7 +69,8 @@ export default function PosDashboard() {
     const matchesCategory =
       selectedCategory === "All" ||
       item.category.toLowerCase() === selectedCategory.toLowerCase();
-    return matchesSearch && matchesCategory;
+    const matchesAvailability = showAllStatuses || item.status === "AVAILABLE";
+    return matchesSearch && matchesCategory && matchesAvailability;
   });
 
   // Calculate metrics
@@ -235,6 +238,26 @@ export default function PosDashboard() {
             </button>
           ))}
         </div>
+
+        {/* Availability Toggle */}
+        <label className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
+          <span className="font-semibold text-muted-foreground">
+            {showAllStatuses ? "Showing all equipment" : "Showing available equipment only"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowAllStatuses((v) => !v)}
+            className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+              showAllStatuses ? "bg-primary" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                showAllStatuses ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </label>
       </div>
 
       {/* Inventory Grid */}
@@ -288,7 +311,7 @@ export default function PosDashboard() {
                   {/* Action/Indicator footer */}
                   <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
                     <span className="text-xs text-muted-foreground">
-                      Condition: <strong className="text-foreground">{item.conditionOnCheckIn}</strong>
+                      Condition: <strong className="text-foreground">{item.condition}</strong>
                     </span>
 
                     {isAvailable && (
@@ -337,7 +360,6 @@ export default function PosDashboard() {
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
           beneficiaries={beneficiaries}
-          onRefreshBeneficiaries={loadData}
         />,
         document.body
       )}
