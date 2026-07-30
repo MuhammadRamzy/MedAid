@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "firebase": "^12.16.0",
