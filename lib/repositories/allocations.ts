@@ -4,7 +4,15 @@ import { adminDb } from "@/lib/firebase/admin";
 import { deriveStatus } from "@/lib/domain/allocation";
 import { formatReceiptNumber, nextSequence } from "@/lib/domain/receipt";
 import { statusForCondition } from "@/lib/domain/condition";
-import type { Allocation, AllocationWithRefs, Condition, Item, Beneficiary } from "@/lib/types";
+import { newContributionRef, buildContributionRecord } from "@/lib/repositories/contributions";
+import type {
+  Allocation,
+  AllocationWithRefs,
+  Condition,
+  ContributionInput,
+  Item,
+  Beneficiary,
+} from "@/lib/types";
 
 const allocations = () => adminDb.collection("allocations");
 
@@ -132,12 +140,16 @@ export interface CreateAllocationInput {
   expectedReturnAt: string;
   notes: string;
   allocatedBy: string;
+  contribution?: ContributionInput;
 }
 
 /**
  * Creating the allocation, flipping the item to ALLOCATED and issuing the
  * receipt number all commit together. Firestore requires every read in a
- * transaction to happen before any write, hence the ordering below.
+ * transaction to happen before any write, hence the ordering below. Any
+ * beneficiary contribution collected at the same time is written in this
+ * same transaction — money collected and the lending record it belongs to
+ * either both persist or neither does.
  */
 export async function createAllocation(
   input: CreateAllocationInput
@@ -145,6 +157,7 @@ export async function createAllocation(
   const itemRef = adminDb.collection("items").doc(input.itemId);
   const counterRef = adminDb.collection("counters").doc("receipts");
   const allocRef = allocations().doc();
+  const contributionRef = input.contribution ? newContributionRef() : null;
 
   const record = await adminDb.runTransaction(async (tx) => {
     const itemSnap = await tx.get(itemRef);
@@ -179,6 +192,19 @@ export async function createAllocation(
     tx.set(counterRef, { year, seq });
     tx.set(allocRef, allocation);
     tx.update(itemRef, { status: "ALLOCATED", currentAllocationId: allocRef.id });
+
+    if (contributionRef && input.contribution) {
+      tx.set(
+        contributionRef,
+        buildContributionRecord({
+          ...input.contribution,
+          beneficiaryId: input.beneficiaryId,
+          allocationId: allocRef.id,
+          stage: "checkout",
+          collectedBy: input.allocatedBy,
+        })
+      );
+    }
 
     return allocation;
   });
