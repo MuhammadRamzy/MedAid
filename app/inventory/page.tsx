@@ -330,6 +330,17 @@ export default function InventoryPage() {
                     <span>Manage</span>
                   </button>
                 </div>
+
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  {item.acquisition.source === "purchase" ? (
+                    <span>Purchased from {item.acquisition.supplier} · ₹{item.acquisition.price.toLocaleString("en-IN")}</span>
+                  ) : (
+                    <span>
+                      Donated by {item.acquisition.contributorName}
+                      {item.acquisition.estimatedValue ? ` · est. ₹${item.acquisition.estimatedValue.toLocaleString("en-IN")}` : ""}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -467,6 +478,31 @@ export default function InventoryPage() {
                   </select>
                   <p className="text-[10px] text-muted-foreground italic">
                     * Condition and operational status are set independently here — update both if a repair changes the device&apos;s status.
+                  </p>
+                </div>
+
+                {/* Acquisition (read-only) */}
+                <div className="space-y-1 rounded-xl border border-border bg-muted/20 p-3">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Acquisition Record
+                  </label>
+                  {editingItem.acquisition.source === "purchase" ? (
+                    <div className="space-y-0.5 text-xs text-foreground">
+                      <p>Purchased · Invoice {editingItem.acquisition.invoiceNumber}</p>
+                      <p>Supplier: {editingItem.acquisition.supplier}</p>
+                      <p>Price: ₹{editingItem.acquisition.price.toLocaleString("en-IN")}</p>
+                      <p>Fund: {editingItem.acquisition.sourceOfFund}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-xs text-foreground">
+                      <p>Donated by {editingItem.acquisition.contributorName}</p>
+                      {editingItem.acquisition.estimatedValue && (
+                        <p>Estimated value: ₹{editingItem.acquisition.estimatedValue.toLocaleString("en-IN")}</p>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Recorded at registration and not editable here.
                   </p>
                 </div>
 
