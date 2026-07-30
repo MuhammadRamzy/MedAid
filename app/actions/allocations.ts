@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { messageForAuthError } from "@/lib/auth/errors";
+import { validateContribution } from "@/lib/domain/contribution";
 import * as allocationsRepo from "@/lib/repositories/allocations";
 import { ItemUnavailableError } from "@/lib/repositories/allocations";
 import * as beneficiariesRepo from "@/lib/repositories/beneficiaries";
-import type { Allocation, AllocationWithRefs, Beneficiary, Condition } from "@/lib/types";
+import type { Allocation, AllocationWithRefs, Beneficiary, Condition, ContributionInput } from "@/lib/types";
 
 export async function getAllocationsAction(): Promise<AllocationWithRefs[]> {
   try {
@@ -33,6 +34,7 @@ export async function createAllocationAction(data: {
   beneficiary: { id?: string; name: string; phone: string; address: string };
   expectedReturnAt: string;
   notes: string;
+  contribution?: unknown;
 }): Promise<{ success: boolean; allocation?: Allocation; error?: string }> {
   try {
     const user = await requireUser();
@@ -50,12 +52,20 @@ export async function createAllocationAction(data: {
 
     if (!beneficiary) return { success: false, error: "Beneficiary not found." };
 
+    let contribution: ContributionInput | undefined;
+    if (data.contribution) {
+      const result = validateContribution(data.contribution);
+      if (!result.valid) return { success: false, error: result.error };
+      contribution = result.contribution;
+    }
+
     const allocation = await allocationsRepo.createAllocation({
       itemId: data.itemId,
       beneficiaryId: beneficiary.id,
       expectedReturnAt: new Date(data.expectedReturnAt).toISOString(),
       notes: data.notes,
       allocatedBy: user.uid,
+      contribution,
     });
 
     revalidatePath("/");
