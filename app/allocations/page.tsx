@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AllocationWithRefs, Condition, DerivedAllocationStatus } from "@/lib/types";
+import { RETURN_CONDITIONS } from "@/lib/domain/condition";
 import { getAllocationsAction, returnAllocationAction } from "@/app/actions/allocations";
 import { 
   Search, 
@@ -71,7 +72,18 @@ export default function AllocationsPage() {
 
   const handleOpenReturnModal = (alloc: AllocationWithRefs) => {
     setSelectedAlloc(alloc);
-    setConditionOnReturn(alloc.item?.condition || "Good");
+    // A device's condition at registration can be "New" or "Used" — values
+    // that aren't offered in this return dropdown (Good/Fair/Needs
+    // Repair/Retired). Falling back to those directly would set the select's
+    // value to an option that doesn't exist, so the dropdown would visually
+    // show "Good" while actually submitting the item's stale registration
+    // condition. Only pre-fill from the item's current condition when it's
+    // already a valid return condition (e.g. this device has been returned
+    // and re-lent before); otherwise default cleanly to "Good".
+    const current = alloc.item?.condition;
+    setConditionOnReturn(
+      current && RETURN_CONDITIONS.includes(current) ? current : "Good"
+    );
     setError(null);
   };
 
