@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { clientAuth } from "@/lib/firebase/client";
 import { Loader2, LogIn } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +32,12 @@ export default function LoginPage() {
         throw new Error(body.error || "Could not sign in.");
       }
 
-      router.replace("/");
-      router.refresh();
+      // A full navigation, not router.replace/refresh: CurrentUserProvider
+      // lives in the root layout and fetches the signed-in user once on
+      // mount. Since that provider never unmounts across a client-side
+      // route change, router.refresh() alone leaves it holding the stale
+      // (signed-out) state. A hard navigation remounts the whole tree.
+      window.location.href = "/";
     } catch (err) {
       // Firebase error codes are not useful to a volunteer.
       const code = (err as { code?: string })?.code;

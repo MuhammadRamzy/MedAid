@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { clientAuth } from "@/lib/firebase/client";
 import { LogOut } from "lucide-react";
 import { useCurrentUser } from "@/components/nav-context";
 
 export function SignOutButton() {
-  const router = useRouter();
   const { user } = useCurrentUser();
 
   if (!user) return null;
@@ -15,8 +13,10 @@ export function SignOutButton() {
   const handleSignOut = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     await signOut(clientAuth).catch(() => undefined);
-    router.replace("/login");
-    router.refresh();
+    // Full navigation, not router.replace/refresh — see the matching
+    // comment in app/login/page.tsx for why: CurrentUserProvider only
+    // fetches once per mount and needs the whole tree to remount.
+    window.location.href = "/login";
   };
 
   return (
