@@ -4,9 +4,13 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { clientAuth } from "@/lib/firebase/client";
 import { LogOut } from "lucide-react";
+import { useCurrentUser } from "@/components/nav-context";
 
 export function SignOutButton() {
   const router = useRouter();
+  const { user } = useCurrentUser();
+
+  if (!user) return null;
 
   const handleSignOut = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
