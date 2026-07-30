@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { messageForAuthError } from "@/lib/auth/errors";
+import { validateAcquisition } from "@/lib/domain/acquisition";
 import * as itemsRepo from "@/lib/repositories/items";
 import type { Condition, Item } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export async function createItemAction(data: {
   category: string;
   condition: Condition;
   registeredAt: string;
+  acquisition: unknown;
 }): Promise<{ success: boolean; item?: Item; error?: string }> {
   try {
     const user = await requireAdmin();
@@ -30,7 +32,20 @@ export async function createItemAction(data: {
       return { success: false, error: `Asset tag ${data.assetTag} already exists.` };
     }
 
-    const item = await itemsRepo.createItem({ ...data, registeredBy: user.uid });
+    const acquisitionResult = validateAcquisition(data.acquisition);
+    if (!acquisitionResult.valid) {
+      return { success: false, error: acquisitionResult.error };
+    }
+
+    const item = await itemsRepo.createItem({
+      assetTag: data.assetTag,
+      name: data.name,
+      category: data.category,
+      condition: data.condition,
+      registeredAt: data.registeredAt,
+      registeredBy: user.uid,
+      acquisition: acquisitionResult.acquisition,
+    });
     revalidatePath("/");
     revalidatePath("/inventory");
     return { success: true, item };

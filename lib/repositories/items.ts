@@ -2,7 +2,7 @@ import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
 import { statusForCondition } from "@/lib/domain/condition";
-import type { Condition, Item } from "@/lib/types";
+import type { Acquisition, Condition, Item } from "@/lib/types";
 
 const items = () => adminDb.collection("items");
 
@@ -15,6 +15,8 @@ function toItem(id: string, data: FirebaseFirestore.DocumentData): Item {
     status: data.status,
     condition: data.condition,
     currentAllocationId: data.currentAllocationId ?? null,
+    registeredAt: data.registeredAt,
+    acquisition: data.acquisition,
   };
 }
 
@@ -43,6 +45,7 @@ export interface CreateItemInput {
   condition: Condition;
   registeredAt: string;
   registeredBy: string;
+  acquisition: Acquisition;
 }
 
 export async function createItem(input: CreateItemInput): Promise<Item> {
@@ -59,6 +62,7 @@ export async function createItem(input: CreateItemInput): Promise<Item> {
     currentAllocationId: null,
     registeredAt: input.registeredAt,
     registeredBy: input.registeredBy,
+    acquisition: input.acquisition,
   };
 
   await ref.set(record);

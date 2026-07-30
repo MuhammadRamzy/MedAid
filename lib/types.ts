@@ -1,7 +1,8 @@
 import type { Condition, ItemStatus } from "@/lib/domain/condition";
 import type { AllocationStatus, DerivedAllocationStatus } from "@/lib/domain/allocation";
+import type { Acquisition } from "@/lib/domain/acquisition";
 
-export type { Condition, ItemStatus, AllocationStatus, DerivedAllocationStatus };
+export type { Condition, ItemStatus, AllocationStatus, DerivedAllocationStatus, Acquisition };
 
 export type UserRole = "admin" | "volunteer";
 
@@ -13,6 +14,8 @@ export interface Item {
   status: ItemStatus;
   condition: Condition;
   currentAllocationId: string | null;
+  registeredAt: string;
+  acquisition: Acquisition;
 }
 
 export interface Beneficiary {

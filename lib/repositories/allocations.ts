@@ -50,6 +50,8 @@ export async function listAllocations(): Promise<AllocationWithRefs[]> {
         status: d.data().status,
         condition: d.data().condition,
         currentAllocationId: d.data().currentAllocationId ?? null,
+        registeredAt: d.data().registeredAt,
+        acquisition: d.data().acquisition,
       },
     ])
   );
@@ -102,6 +104,8 @@ export async function getAllocation(id: string): Promise<AllocationWithRefs | nu
           status: itemDoc.data()!.status,
           condition: itemDoc.data()!.condition,
           currentAllocationId: itemDoc.data()!.currentAllocationId ?? null,
+          registeredAt: itemDoc.data()!.registeredAt,
+          acquisition: itemDoc.data()!.acquisition,
         }
       : undefined,
     beneficiary: benDoc.exists
