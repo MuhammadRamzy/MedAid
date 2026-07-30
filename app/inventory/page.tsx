@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Item } from "@/lib/db-service";
+import { Item } from "@/lib/types";
 import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions";
 import {
   Search,

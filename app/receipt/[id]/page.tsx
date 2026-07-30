@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Allocation, Item, Beneficiary } from "@/lib/db-service";
+import { AllocationWithRefs } from "@/lib/types";
 import { getAllocationsAction } from "@/app/actions";
 import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
@@ -12,9 +12,7 @@ export default function ReceiptPage() {
   const params = useParams();
   const rawIdString = params?.id as string;
 
-  const [allocations, setAllocations] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary })[]
-  >([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

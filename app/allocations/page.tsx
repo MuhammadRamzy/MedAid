@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Allocation, Item, Beneficiary } from "@/lib/db-service";
+import { AllocationWithRefs } from "@/lib/types";
 import { getAllocationsAction, returnAllocationAction } from "@/app/actions";
 import { 
   Search, 
@@ -19,17 +19,13 @@ import {
 import Link from "next/link";
 
 export default function AllocationsPage() {
-  const [allocations, setAllocations] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary })[]
-  >([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "OVERDUE" | "RETURNED">("ACTIVE");
 
   // Return Modal State
-  const [selectedAlloc, setSelectedAlloc] = useState<
-    (Allocation & { item?: Item; beneficiary?: Beneficiary }) | null
-  >(null);
+  const [selectedAlloc, setSelectedAlloc] = useState<AllocationWithRefs | null>(null);
   const [conditionOnCheckIn, setConditionOnCheckIn] = useState("Good");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +69,9 @@ export default function AllocationsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleOpenReturnModal = (
-    alloc: Allocation & { item?: Item; beneficiary?: Beneficiary }
-  ) => {
+  const handleOpenReturnModal = (alloc: AllocationWithRefs) => {
     setSelectedAlloc(alloc);
-    setConditionOnCheckIn(alloc.item?.conditionOnCheckIn || "Good");
+    setConditionOnCheckIn(alloc.item?.condition || "Good");
     setError(null);
   };
 
@@ -134,9 +128,7 @@ export default function AllocationsPage() {
     }
   };
 
-  const getReminderWhatsAppUrl = (
-    alloc: Allocation & { item?: Item; beneficiary?: Beneficiary }
-  ) => {
+  const getReminderWhatsAppUrl = (alloc: AllocationWithRefs) => {
     if (!alloc.beneficiary || !alloc.item) return "#";
     const cleanPhone = alloc.beneficiary.phone.replace(/\D/g, "");
     

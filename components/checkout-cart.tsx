@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Item, Beneficiary } from "@/lib/db-service";
+import { Item, Beneficiary } from "@/lib/types";
 import { createBeneficiaryAction, createAllocationAction } from "@/app/actions";
 import { X, Trash2, UserPlus, UserCheck, Calendar, FileText, Loader2, ChevronsRight } from "lucide-react";
 import { useRouter } from "next/navigation";

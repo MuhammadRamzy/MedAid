@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Item, Beneficiary, Allocation } from "@/lib/db-service";
+import { Item, Beneficiary, AllocationWithRefs } from "@/lib/types";
 import { getItemsAction, getBeneficiariesAction, getAllocationsAction } from "@/app/actions";
 import { CheckoutCart } from "@/components/checkout-cart";
 import { 
@@ -23,7 +23,7 @@ export default function PosDashboard() {
   // DB States
   const [items, setItems] = useState<Item[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [allocations, setAllocations] = useState<(Allocation & { item?: Item; beneficiary?: Beneficiary })[]>([]);
+  const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Cart State
