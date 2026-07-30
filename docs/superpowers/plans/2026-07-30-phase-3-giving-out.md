@@ -601,8 +601,12 @@ const contributionPayload =
       }
     : undefined;
 
+// This project's tsconfig has no explicit `target`, which defaults to ES3 —
+// `for...of` over `Array.prototype.entries()` fails to compile under that
+// target without --downlevelIteration. Use a plain indexed loop instead.
 const allocationIds: string[] = [];
-for (const [index, item] of cartItems.entries()) {
+for (let index = 0; index < cartItems.length; index++) {
+  const item = cartItems[index];
   const allocRes = await createAllocationAction({
     itemId: item.id,
     beneficiary: beneficiaryPayload,
