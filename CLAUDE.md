@@ -33,9 +33,15 @@ Firestore is reached **only from the server**, only through `lib/repositories/*.
 
 ### Auth: session cookie, not client Firestore
 
-The browser's Firebase SDK (`lib/firebase/client.ts`) is used for exactly one call: `signInWithEmailAndPassword` on [app/login/page.tsx](app/login/page.tsx). The resulting ID token is posted to `POST /api/auth/session`, which the Admin SDK exchanges for an httpOnly session cookie (`lib/auth/session.ts`, cookie name `qidma_session`). Server actions call `requireUser()` or `requireAdmin()` (`lib/auth/session.ts`) to read `{ uid, email, role }` from that cookie — `role` is a Firebase custom claim, not a Firestore read, so it costs nothing extra per request.
+The browser's Firebase SDK (`lib/firebase/client.ts`) is used for exactly two things: `signInWithEmailAndPassword` and `signInWithPopup(googleProvider)`, both on [app/login/page.tsx](app/login/page.tsx). Every sign-in — either provider — funnels through the same two-step exchange before a session cookie exists:
 
-**There is no public signup.** Every account is created by an administrator via `createUserAction` (`app/actions/users.ts`), which generates an initial password and returns it once for the admin to relay over WhatsApp. The very first administrator can't be created this way — run `npm run bootstrap:admin` with `BOOTSTRAP_ADMIN_*` set in `.env.local`, then clear those values.
+1. `POST /api/auth/provision` — verifies the ID token and calls `ensureUserProfile()` (`lib/repositories/users.ts`). For an admin-created PIN account this is a no-op existence check. For a **first-time Google sign-in**, it creates the `users/{uid}` Firestore doc and sets the `role: "volunteer"` custom claim — there is no admin step first for Google.
+2. The client **force-refreshes its ID token** (`getIdToken(true)`) before the next call. The token from step 1 was minted before any claim that step could have just set, so it cannot itself carry it — this refresh is what makes the following step's cookie correct, not an optimization to skip.
+3. `POST /api/auth/session` — the Admin SDK exchanges the refreshed token for an httpOnly session cookie (`lib/auth/session.ts`, cookie name `qidma_session`). Server actions call `requireUser()`/`requireAdmin()` to read `{ uid, email, role }` from that cookie — `role` is a Firebase custom claim, not a Firestore read, so it costs nothing extra per request.
+
+**Two account paths, different trust levels.** Email + 6-digit PIN accounts are still admin-created only, via `createUserAction` (`app/actions/users.ts`), which generates the PIN and returns it once for the admin to relay over WhatsApp — `lib/domain/pin.ts` is why it's 6 digits specifically (Firebase's own password minimum). Google sign-in is **open self-signup**: anyone with a Google account gets a `volunteer` account automatically on first login. An admin promotes/demotes via `setUserRoleAction`, or removes an account entirely via `deleteUserAction` (`lib/repositories/users.ts` `setUserRole`/`deleteUser` — both update the Firestore doc *and* the Auth record/custom claim; promotion and disable also call `revokeRefreshTokens` so the change is immediate, not "next cookie expiry"). The very first administrator can't be created through either path — run `npm run bootstrap:admin` with `BOOTSTRAP_ADMIN_*` set in `.env.local` (PIN is `BOOTSTRAP_ADMIN_PIN`, optional — the script generates and prints one if it's missing or invalid), then clear those values.
+
+Because accounts can now be deleted (not just disabled), allocations store the acting user's name **at write time** (`Allocation.allocatedByName` / `checkedInByName`) rather than resolving it live against the `users` collection — `lib/repositories/allocations.ts` no longer joins against `users` at all. Deleting an account can never blank out a historical "Given out by" / "Checked in by" entry.
 
 `middleware.ts` redirects requests with no session cookie to `/login`, but it runs on the Edge runtime where `firebase-admin` cannot load — it only checks cookie *presence*, hardcoding the cookie name as a literal string rather than importing it. **Middleware is not the authorization boundary.** Every server action independently calls `requireUser()`/`requireAdmin()`; a hidden nav link is not access control.
 
@@ -57,7 +63,7 @@ The cart holds N items but produces **one allocation per item**, all for the sam
 
 ### WhatsApp: two separate mechanisms
 
-1. **Real, user-initiated**: `wa.me` deep links built client-side in [app/receipt/[id]/page.tsx](app/receipt/[id]/page.tsx), [app/allocations/page.tsx](app/allocations/page.tsx), and the volunteer-password share in [app/admin/users/page.tsx](app/admin/users/page.tsx). The user taps and sends from their own WhatsApp.
+1. **Real, user-initiated**: `wa.me` deep links built client-side in [app/receipt/[id]/page.tsx](app/receipt/[id]/page.tsx), [app/allocations/page.tsx](app/allocations/page.tsx), and the volunteer-PIN share in [app/admin/users/page.tsx](app/admin/users/page.tsx). The user taps and sends from their own WhatsApp.
 2. **Simulated**: [app/api/notifications/send/route.ts](app/api/notifications/send/route.ts) only `console.log`s the composed message — nothing is sent. This is still the case; replacing it with a real Twilio/Baileys integration is out of scope for the current phase.
 
 ### UI conventions
