@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AllocationWithRefs, Condition, DerivedAllocationStatus } from "@/lib/types";
 import { RETURN_CONDITIONS } from "@/lib/domain/condition";
 import { getAllocationsAction, returnAllocationAction } from "@/app/actions/allocations";
@@ -43,6 +44,14 @@ export default function AllocationsPage() {
   const [contributionMethod, setContributionMethod] = useState<"cash" | "upi" | "bank_transfer">("cash");
   const [contributionReference, setContributionReference] = useState("");
 
+  // The return modal is portaled into document.body (see handleOpenReturnModal
+  // usage below) — same fix as the checkout drawer and inventory edit modal,
+  // since `position: fixed` breaks once nested inside this page's
+  // `animate-page` wrapper (its enter animation leaves a `transform` applied
+  // via `forwards` fill, which makes it a containing block for fixed
+  // descendants). `mounted` avoids a hydration mismatch on first render.
+  const [mounted, setMounted] = useState(false);
+
   const todayIsoDate = () => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -64,6 +73,7 @@ export default function AllocationsPage() {
 
   useEffect(() => {
     loadAllocations();
+    setMounted(true);
   }, []);
 
   // Filter allocations
@@ -449,9 +459,9 @@ Thank you.`;
       )}
 
       {/* Return Modal Overlay */}
-      {selectedAlloc && (
+      {mounted && typeof document !== "undefined" && selectedAlloc && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl animate-slide-up border border-border">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl bg-card p-6 shadow-2xl animate-slide-up border border-border">
             <button
               onClick={handleCloseReturnModal}
               className="absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -610,7 +620,8 @@ Thank you.`;
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
