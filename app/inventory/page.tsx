@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { Item, Condition } from "@/lib/types";
 import { getItemsAction, updateItemAction, deleteItemAction } from "@/app/actions/items";
 import { useCurrentUser } from "@/components/nav-context";
+import { useConfirm } from "@/components/use-confirm";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Wrench,
@@ -40,10 +44,10 @@ export default function InventoryPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [editSuccess, setEditSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const { user, loading: loadingSession } = useCurrentUser();
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const loadItems = async () => {
     setLoading(true);
@@ -72,7 +76,6 @@ export default function InventoryPage() {
     setEditStatus(item.status);
     setEditCondition(item.condition);
     setEditError(null);
-    setEditSuccess(false);
   };
 
   const handleCloseEditModal = () => {
@@ -95,13 +98,10 @@ export default function InventoryPage() {
       });
 
       if (result.success) {
-        setEditSuccess(true);
-        // Reload items list
         const updatedItems = await getItemsAction();
         setItems(updatedItems);
-        setTimeout(() => {
-          handleCloseEditModal();
-        }, 1200);
+        toast.success(`${editName} updated`);
+        handleCloseEditModal();
       } else {
         setEditError(result.error || "Failed to update item.");
       }
@@ -114,23 +114,24 @@ export default function InventoryPage() {
 
   const handleDeleteItem = async () => {
     if (!editingItem) return;
-    
-    const confirmMessage = `Are you sure you want to permanently delete "${editingItem.name}" (Tag: ${editingItem.assetTag})?\nThis will remove the item and its lease history. This action cannot be undone.`;
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+
+    const ok = await confirm({
+      title: "Permanently delete this equipment?",
+      description: `"${editingItem.name}" (Tag: ${editingItem.assetTag}) and its lease history will be removed. This cannot be undone.`,
+      confirmLabel: "Delete Equipment",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setIsSubmitting(true);
     setEditError(null);
     try {
       const result = await deleteItemAction(editingItem.id);
       if (result.success) {
-        setEditSuccess(true);
         const updatedItems = await getItemsAction();
         setItems(updatedItems);
-        setTimeout(() => {
-          handleCloseEditModal();
-        }, 1200);
+        toast.success(`${editingItem.name} deleted`);
+        handleCloseEditModal();
       } else {
         setEditError(result.error || "Failed to delete item.");
       }
@@ -160,31 +161,31 @@ export default function InventoryPage() {
     switch (status) {
       case "AVAILABLE":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100 uppercase tracking-wide">
+          <Badge variant="success">
             <CheckCircle2 className="h-3 w-3" />
             <span>Available</span>
-          </span>
+          </Badge>
         );
       case "ALLOCATED":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-100 uppercase tracking-wide">
+          <Badge variant="info">
             <Activity className="h-3 w-3 animate-pulse" />
             <span>Allocated</span>
-          </span>
+          </Badge>
         );
       case "MAINTENANCE":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 border border-amber-100 uppercase tracking-wide">
+          <Badge variant="warning">
             <Wrench className="h-3 w-3" />
             <span>Maintenance</span>
-          </span>
+          </Badge>
         );
       case "RETIRED":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 border border-slate-200 uppercase tracking-wide">
+          <Badge variant="neutral">
             <XOctagon className="h-3 w-3" />
             <span>Retired</span>
-          </span>
+          </Badge>
         );
     }
   };
@@ -209,6 +210,7 @@ export default function InventoryPage() {
 
   return (
     <>
+      {ConfirmDialog}
       <div className="space-y-6 pb-12 animate-page">
       {/* Title Header */}
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
@@ -382,12 +384,6 @@ export default function InventoryPage() {
               </p>
             </div>
 
-            {/* Success Feedback */}
-            {editSuccess ? (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-center text-sm font-bold text-emerald-800 animate-pulse">
-                Inventory successfully updated!
-              </div>
-            ) : (
               <form onSubmit={handleUpdateItem} className="space-y-4">
                 {editError && (
                   <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-semibold">
@@ -520,34 +516,27 @@ export default function InventoryPage() {
 
                 {/* Actions: Save / Cancel */}
                 <div className="flex space-x-3 border-t border-border/40 pt-4 mt-6">
-                  <button
-                    type="button"
-                    onClick={handleCloseEditModal}
-                    className="flex-1 rounded-xl border border-border py-2.5 text-xs font-bold hover:bg-muted transition-all"
-                  >
+                  <Button type="button" variant="outline" onClick={handleCloseEditModal} className="flex-1">
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 transition-all active:scale-[0.98] disabled:opacity-50"
-                  >
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting} className="flex-1">
                     {isSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Delete Button (Allowed if not allocated) */}
                 <div className="border-t border-border/40 pt-4">
                   {editingItem.status !== "ALLOCATED" ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="destructive"
                       onClick={handleDeleteItem}
                       disabled={isSubmitting}
-                      className="w-full flex items-center justify-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="w-full"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 />
                       <span>Delete Equipment Permanently</span>
-                    </button>
+                    </Button>
                   ) : (
                     <p className="text-[10px] text-muted-foreground text-center bg-slate-50 p-2 rounded border border-slate-100">
                       This item is currently active on loan and cannot be deleted.
@@ -555,7 +544,6 @@ export default function InventoryPage() {
                   )}
                 </div>
               </form>
-            )}
           </div>
         </div>,
         document.body

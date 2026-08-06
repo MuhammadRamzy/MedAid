@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { createItemAction } from "@/app/actions/items";
 import type { Condition } from "@/lib/types";
 import { useCurrentUser } from "@/components/nav-context";
-import { PlusCircle, Tag, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Tag, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -26,8 +28,21 @@ export default function AddItemPage() {
   const [estimatedValue, setEstimatedValue] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Disable submit until the form is actually completable, rather than only
+  // discovering missing fields after a failed submit attempt.
+  const isFormValid =
+    name.trim().length > 0 &&
+    assetTag.trim().length > 0 &&
+    (acquisitionSource === "purchase"
+      ? invoiceNumber.trim().length > 0 &&
+        supplier.trim().length > 0 &&
+        sourceOfFund.trim().length > 0 &&
+        Number(price) > 0
+      : acquisitionSource === "donation"
+        ? contributorName.trim().length > 0
+        : false);
 
   // Suggest a tag based on category
   const handleSuggestTag = () => {
@@ -49,7 +64,6 @@ export default function AddItemPage() {
 
     setIsSubmitting(true);
     setError(null);
-    setSuccess(false);
 
     const acquisition =
       acquisitionSource === "purchase"
@@ -80,7 +94,12 @@ export default function AddItemPage() {
         throw new Error(res.error || "Failed to create item.");
       }
 
-      setSuccess(true);
+      toast.success(
+        `${name.trim()} registered`,
+        condition === "Needs Repair"
+          ? { description: "Held in maintenance until it's fixed." }
+          : { description: "Immediately available for lending." }
+      );
       setName("");
       setAssetTag("");
       setAcquisitionSource(null);
@@ -130,18 +149,6 @@ export default function AddItemPage() {
       </div>
 
       {/* Status Messages */}
-      {success && (
-        <div className="flex items-start space-x-3 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-emerald-800 animate-fade-in shadow-sm">
-          <CheckCircle2 className="h-5 w-5 mt-0.5 flex-shrink-0 text-emerald-600" />
-          <div>
-            <h4 className="text-sm font-bold">Equipment Registered Successfully</h4>
-            <p className="text-xs text-emerald-600 mt-0.5">
-              The item has been added to the catalog{condition === "Needs Repair" ? " and held in maintenance until it is fixed." : " and is immediately available for lending."}
-            </p>
-          </div>
-        </div>
-      )}
-
       {error && (
         <div className="flex items-start space-x-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-4 text-destructive animate-fade-in shadow-sm">
           <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-destructive-600" />
@@ -334,14 +341,10 @@ export default function AddItemPage() {
           )}
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex w-full items-center justify-center space-x-1.5 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50"
-          >
-            <PlusCircle className="h-4 w-4" />
+          <Button type="submit" size="lg" disabled={isSubmitting || !isFormValid} className="w-full">
+            <PlusCircle />
             <span>{isSubmitting ? "Registering..." : "Register Equipment"}</span>
-          </button>
+          </Button>
         </form>
       </div>
     </div>

@@ -2,17 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, MessageSquare, Plus, ShieldCheck, UserX } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowLeft, Loader2, MessageSquare, Plus, ShieldCheck, ShieldOff, Trash2, UserX } from "lucide-react";
 import { useCurrentUser } from "@/components/nav-context";
-import { getUsersAction, createUserAction, setUserDisabledAction } from "@/app/actions/users";
+import { useConfirm } from "@/components/use-confirm";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  getUsersAction,
+  createUserAction,
+  setUserDisabledAction,
+  setUserRoleAction,
+  deleteUserAction,
+} from "@/app/actions/users";
 import type { UserProfile, UserRole } from "@/lib/types";
 
 export default function VolunteersPage() {
   const { user, loading: loadingSession } = useCurrentUser();
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyUid, setBusyUid] = useState<string | null>(null);
 
   // Create form state
   const [name, setName] = useState("");
@@ -21,10 +33,8 @@ export default function VolunteersPage() {
   const [role, setRole] = useState<UserRole>("volunteer");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Newly created account, shown once with its password
-  const [created, setCreated] = useState<{ name: string; mobile: string; email: string; password: string } | null>(
-    null
-  );
+  // Newly created account, shown once with its PIN
+  const [created, setCreated] = useState<{ name: string; mobile: string; email: string; pin: string } | null>(null);
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -57,21 +67,22 @@ export default function VolunteersPage() {
 
     try {
       const res = await createUserAction({ name: name.trim(), mobile: mobile.trim(), email: email.trim(), role });
-      if (!res.success || !res.profile || !res.password) {
+      if (!res.success || !res.profile || !res.pin) {
         throw new Error(res.error || "Could not create the account.");
       }
 
       setCreated({
         name: res.profile.name,
-        mobile: res.profile.mobile,
+        mobile: res.profile.mobile ?? "",
         email: res.profile.email,
-        password: res.password,
+        pin: res.pin,
       });
       setName("");
       setMobile("+91");
       setEmail("");
       setRole("volunteer");
       await loadUsers();
+      toast.success(`Account created for ${res.profile.name}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -80,27 +91,88 @@ export default function VolunteersPage() {
   };
 
   const handleToggleDisabled = async (u: UserProfile) => {
-    const confirmMessage = u.disabled
-      ? `Re-enable ${u.name}'s account?`
-      : `Disable ${u.name}'s account? They will be signed out immediately.`;
-    if (!window.confirm(confirmMessage)) return;
+    const ok = await confirm(
+      u.disabled
+        ? { title: "Re-enable account?", description: `${u.name} will be able to sign in again.`, confirmLabel: "Re-enable" }
+        : {
+            title: "Disable account?",
+            description: `${u.name} will be signed out immediately and unable to sign back in until re-enabled.`,
+            confirmLabel: "Disable",
+            variant: "destructive",
+          }
+    );
+    if (!ok) return;
 
+    setBusyUid(u.uid);
     const res = await setUserDisabledAction(u.uid, !u.disabled);
+    setBusyUid(null);
     if (!res.success) {
-      window.alert(res.error || "Could not update the account.");
+      toast.error(res.error || "Could not update the account.");
       return;
     }
+    toast.success(u.disabled ? `${u.name} re-enabled` : `${u.name} disabled`);
     await loadUsers();
   };
 
-  const shareUrl = created
+  const handleToggleRole = async (u: UserProfile) => {
+    const nextRole: UserRole = u.role === "admin" ? "volunteer" : "admin";
+    const ok = await confirm(
+      nextRole === "admin"
+        ? {
+            title: "Make this user an administrator?",
+            description: `${u.name} will get full access to devices, volunteers and records.`,
+            confirmLabel: "Make Admin",
+          }
+        : {
+            title: "Remove administrator access?",
+            description: `${u.name} will be signed out immediately and revert to a volunteer account.`,
+            confirmLabel: "Remove Admin",
+            variant: "destructive",
+          }
+    );
+    if (!ok) return;
+
+    setBusyUid(u.uid);
+    const res = await setUserRoleAction(u.uid, nextRole);
+    setBusyUid(null);
+    if (!res.success) {
+      toast.error(res.error || "Could not update the account.");
+      return;
+    }
+    toast.success(`${u.name} is now ${nextRole === "admin" ? "an administrator" : "a volunteer"}`);
+    await loadUsers();
+  };
+
+  const handleDelete = async (u: UserProfile) => {
+    const ok = await confirm({
+      title: "Permanently delete this account?",
+      description: `This cannot be undone. ${u.name}'s past activity stays on record in the ledger and Activity Log.`,
+      confirmLabel: "Delete Account",
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    setBusyUid(u.uid);
+    const res = await deleteUserAction(u.uid);
+    setBusyUid(null);
+    if (!res.success) {
+      toast.error(res.error || "Could not delete the account.");
+      return;
+    }
+    toast.success(`${u.name}'s account was deleted`);
+    await loadUsers();
+  };
+
+  const shareUrl = created && created.mobile
     ? `https://wa.me/${created.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(
-        `QIDMA Medical Aid sign-in\nEmail: ${created.email}\nPassword: ${created.password}\n\nPlease change your password after signing in.`
+        `QIDMA Medical Aid sign-in\nEmail: ${created.email}\nPIN: ${created.pin}\n\nUse this PIN as your password when you sign in.`
       )}`
     : "#";
 
   return (
     <div className="animate-page space-y-6">
+      {ConfirmDialog}
+
       <Link
         href="/admin"
         className="inline-flex items-center space-x-2 text-xs font-bold text-muted-foreground transition-colors hover:text-primary"
@@ -111,7 +183,10 @@ export default function VolunteersPage() {
 
       <div>
         <h2 className="text-xl font-extrabold tracking-tight text-teal-900 md:text-2xl">Volunteers</h2>
-        <p className="text-xs text-muted-foreground">Create accounts and control who has access.</p>
+        <p className="text-xs text-muted-foreground">
+          Create accounts, promote administrators, and control who has access. People who sign in with Google
+          appear here automatically as volunteers the moment they first sign in.
+        </p>
       </div>
 
       {/* Create form */}
@@ -171,14 +246,10 @@ export default function VolunteersPage() {
           </div>
 
           <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 sm:w-auto"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+              {isSubmitting ? <Loader2 className="animate-spin" /> : <Plus />}
               <span>{isSubmitting ? "Creating..." : "Create Account"}</span>
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -186,10 +257,11 @@ export default function VolunteersPage() {
           <div className="mt-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
             <p className="text-sm font-bold">Account created for {created.name}</p>
             <p className="text-xs">
-              Password: <span className="font-mono font-bold">{created.password}</span>
+              PIN: <span className="font-mono text-base font-bold tracking-widest">{created.pin}</span>
             </p>
             <p className="text-[11px] text-emerald-700">
-              Share this password with the volunteer. It will not be shown again.
+              Share this PIN with the volunteer — they sign in with their email and this PIN. It will not be shown
+              again.
             </p>
             <a
               href={shareUrl}
@@ -220,43 +292,72 @@ export default function VolunteersPage() {
           </p>
         ) : (
           <div className="space-y-2">
-            {users.map((u) => (
-              <div
-                key={u.uid}
-                className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
-                  u.disabled ? "border-border bg-muted/30 opacity-70" : "border-border bg-card"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-foreground">{u.name}</span>
-                    {u.role === "admin" && (
-                      <span className="inline-flex items-center space-x-1 rounded-full border border-teal-100 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                        <ShieldCheck className="h-3 w-3" />
-                        <span>Admin</span>
-                      </span>
-                    )}
-                    {u.disabled && (
-                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
-                        Disabled
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {u.email} · {u.mobile}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleToggleDisabled(u)}
-                  disabled={u.uid === user.uid}
-                  title={u.uid === user.uid ? "You cannot disable your own account." : undefined}
-                  className="flex items-center space-x-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            {users.map((u) => {
+              const isSelf = u.uid === user.uid;
+              const isBusy = busyUid === u.uid;
+              return (
+                <div
+                  key={u.uid}
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
+                    u.disabled ? "border-border bg-muted/30 opacity-70" : "border-border bg-card"
+                  }`}
                 >
-                  <UserX className="h-3.5 w-3.5" />
-                  <span>{u.disabled ? "Enable" : "Disable"}</span>
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-bold text-foreground">{u.name}</span>
+                      {u.role === "admin" && (
+                        <Badge>
+                          <ShieldCheck className="h-3 w-3" />
+                          <span>Admin</span>
+                        </Badge>
+                      )}
+                      {u.disabled && (
+                        <Badge variant="neutral">
+                          <UserX className="h-3 w-3" />
+                          <span>Disabled</span>
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {u.email} · {u.mobile ?? "no phone on file"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleRole(u)}
+                      disabled={isSelf || isBusy}
+                      title={isSelf ? "You cannot change your own role." : undefined}
+                    >
+                      {u.role === "admin" ? <ShieldOff /> : <ShieldCheck />}
+                      <span>{u.role === "admin" ? "Remove Admin" : "Make Admin"}</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleDisabled(u)}
+                      disabled={isSelf || isBusy}
+                      title={isSelf ? "You cannot disable your own account." : undefined}
+                    >
+                      <UserX />
+                      <span>{u.disabled ? "Enable" : "Disable"}</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(u)}
+                      disabled={isSelf || isBusy}
+                      title={isSelf ? "You cannot delete your own account." : undefined}
+                    >
+                      <Trash2 />
+                      <span>Delete</span>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

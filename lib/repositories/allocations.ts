@@ -23,9 +23,11 @@ function toAllocation(id: string, data: FirebaseFirestore.DocumentData): Allocat
     beneficiaryId: data.beneficiaryId,
     allocatedAt: data.allocatedAt,
     allocatedBy: data.allocatedBy,
+    allocatedByName: data.allocatedByName ?? "Unknown",
     expectedReturnAt: data.expectedReturnAt,
     actualReturnedAt: data.actualReturnedAt ?? null,
     checkedInBy: data.checkedInBy ?? null,
+    checkedInByName: data.checkedInByName ?? null,
     conditionOnReturn: data.conditionOnReturn ?? null,
     status: data.status,
     notes: data.notes ?? "",
@@ -34,17 +36,16 @@ function toAllocation(id: string, data: FirebaseFirestore.DocumentData): Allocat
 }
 
 /**
- * Loads allocations with their item, beneficiary and acting user names.
- * Reads every collection once and joins in memory rather than issuing a query
- * per row. At committee scale this is the cheaper shape; if the inventory
- * grows into the thousands this needs pagination.
+ * Loads allocations with their item and beneficiary. The acting users' names
+ * are stored on the allocation itself at write time (see createAllocation /
+ * returnAllocation) rather than joined here — that is what keeps the ledger
+ * readable after an account is deleted, not merely disabled.
  */
 export async function listAllocations(): Promise<AllocationWithRefs[]> {
-  const [allocSnap, itemSnap, benSnap, userSnap] = await Promise.all([
+  const [allocSnap, itemSnap, benSnap] = await Promise.all([
     allocations().orderBy("allocatedAt", "desc").get(),
     adminDb.collection("items").get(),
     adminDb.collection("beneficiaries").get(),
-    adminDb.collection("users").get(),
   ]);
 
   const itemsById = new Map<string, Item>(
@@ -71,10 +72,6 @@ export async function listAllocations(): Promise<AllocationWithRefs[]> {
     ])
   );
 
-  const namesByUid = new Map<string, string>(
-    userSnap.docs.map((d) => [d.id, d.data().name as string])
-  );
-
   const now = new Date();
 
   return allocSnap.docs.map((doc) => {
@@ -84,8 +81,6 @@ export async function listAllocations(): Promise<AllocationWithRefs[]> {
       status: deriveStatus(base.status, base.expectedReturnAt, now),
       item: itemsById.get(base.itemId),
       beneficiary: bensById.get(base.beneficiaryId),
-      allocatedByName: namesByUid.get(base.allocatedBy),
-      checkedInByName: base.checkedInBy ? namesByUid.get(base.checkedInBy) : undefined,
     };
   });
 }
@@ -140,6 +135,7 @@ export interface CreateAllocationInput {
   expectedReturnAt: string;
   notes: string;
   allocatedBy: string;
+  allocatedByName: string;
   contribution?: ContributionInput;
 }
 
@@ -180,9 +176,11 @@ export async function createAllocation(
       beneficiaryId: input.beneficiaryId,
       allocatedAt: new Date().toISOString(),
       allocatedBy: input.allocatedBy,
+      allocatedByName: input.allocatedByName,
       expectedReturnAt: input.expectedReturnAt,
       actualReturnedAt: null,
       checkedInBy: null,
+      checkedInByName: null,
       conditionOnReturn: null,
       status: "ACTIVE" as const,
       notes: input.notes,
@@ -217,13 +215,19 @@ export interface ReturnAllocationInput {
   actualReturnedAt: string;
   conditionOnReturn: Condition;
   checkedInBy: string;
+  checkedInByName: string;
+  contribution?: ContributionInput;
 }
 
-/** The allocation update and the item's condition-derived status commit together. */
+/**
+ * The allocation update, the item's condition-derived status, and any
+ * check-in contribution all commit together in one transaction.
+ */
 export async function returnAllocation(
   input: ReturnAllocationInput
 ): Promise<Allocation | null> {
   const allocRef = allocations().doc(input.allocationId);
+  const contributionRef = input.contribution ? newContributionRef() : null;
 
   return adminDb.runTransaction(async (tx) => {
     const allocSnap = await tx.get(allocRef);
@@ -236,6 +240,7 @@ export async function returnAllocation(
     const patch = {
       actualReturnedAt: input.actualReturnedAt,
       checkedInBy: input.checkedInBy,
+      checkedInByName: input.checkedInByName,
       conditionOnReturn: input.conditionOnReturn,
       status: "RETURNED" as const,
     };
@@ -248,6 +253,19 @@ export async function returnAllocation(
         condition: input.conditionOnReturn,
         currentAllocationId: null,
       });
+    }
+
+    if (contributionRef && input.contribution) {
+      tx.set(
+        contributionRef,
+        buildContributionRecord({
+          ...input.contribution,
+          beneficiaryId: existing.beneficiaryId,
+          allocationId: existing.id,
+          stage: "checkin",
+          collectedBy: input.checkedInBy,
+        })
+      );
     }
 
     return { ...existing, ...patch };

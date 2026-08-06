@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { BottomNav } from "@/components/bottom-nav";
 import { DesktopNav } from "@/components/desktop-nav";
@@ -42,6 +43,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background pb-16 md:pb-0 text-foreground">
         <CurrentUserProvider>
+          <Toaster richColors position="top-center" closeButton />
           <PWARegister />
 
           {/* Global Navigation Header */}

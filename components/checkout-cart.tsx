@@ -100,6 +100,18 @@ export function SlideToConfirm({ onConfirm, disabled, isLoading }: SlideToConfir
     }
   }, [isLoading]);
 
+  // Keyboard/Switch Control/screen-reader path: the drag gesture above has
+  // no equivalent without a pointer, so Enter/Space on the focused handle
+  // confirms directly rather than requiring a simulated drag.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled || isLoading) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setSliderPosition(100);
+      onConfirm();
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -132,15 +144,22 @@ export function SlideToConfirm({ onConfirm, disabled, isLoading }: SlideToConfir
         {isLoading ? "Processing Lease Request..." : "Slide to Confirm Allocation"}
       </span>
 
-      {/* Slider Button Handle */}
+      {/* Slider Button Handle — also a real, keyboard-operable button.
+          Dragging is the primary mouse/touch interaction; Enter/Space is the
+          keyboard and Switch Control equivalent, not a secondary option. */}
       <div
+        role="button"
+        tabIndex={disabled || isLoading ? -1 : 0}
+        aria-label="Confirm allocation"
+        aria-disabled={disabled || isLoading}
         onMouseDown={(e) => handleStart(e.clientX)}
         onTouchStart={(e) => {
           if (e.touches.length > 0) {
             handleStart(e.touches[0].clientX);
           }
         }}
-        className={`absolute left-1 top-1 h-12 w-12 rounded-xl bg-teal-600 text-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md z-20 ${
+        onKeyDown={handleKeyDown}
+        className={`absolute left-1 top-1 h-12 w-12 rounded-xl bg-teal-600 text-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-800 ${
           isDragging ? "" : "transition-transform duration-200"
         }`}
         style={{ transform: `translateX(${(sliderPosition / 100) * trackWidthRef.current}px)` }}
@@ -211,6 +230,14 @@ export function CheckoutCart({
       setSelectedBeneficiaryId(beneficiaries[0].id);
     }
   }, [beneficiaries, selectedBeneficiaryId]);
+
+  // Disables the confirm slider until the checkout is actually completable,
+  // rather than only surfacing missing fields after a failed submit.
+  const isBeneficiaryValid =
+    beneficiaryMode === "existing"
+      ? selectedBeneficiaryId.length > 0
+      : newBenName.trim().length > 0 && newBenPhone.trim().length > 3 && newBenAddress.trim().length > 0;
+  const isFormValid = cartItems.length > 0 && isBeneficiaryValid && expectedReturnDate.length > 0;
 
   if (!isOpen) return null;
 
@@ -562,7 +589,7 @@ export function CheckoutCart({
         <div className="border-t border-border bg-card p-4 flex-shrink-0">
           <SlideToConfirm
             onConfirm={handleCheckout}
-            disabled={cartItems.length === 0}
+            disabled={!isFormValid}
             isLoading={isSubmitting}
           />
         </div>

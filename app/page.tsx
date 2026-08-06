@@ -6,14 +6,15 @@ import { Item, Beneficiary, AllocationWithRefs } from "@/lib/types";
 import { getItemsAction } from "@/app/actions/items";
 import { getBeneficiariesAction, getAllocationsAction } from "@/app/actions/allocations";
 import { CheckoutCart } from "@/components/checkout-cart";
-import { 
-  Search, 
-  ShoppingCart, 
-  Activity, 
-  AlertCircle, 
-  CheckCircle2, 
-  Plus, 
-  Check, 
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  ShoppingCart,
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Plus,
+  Check,
   X,
   Package,
   Wrench,
@@ -103,31 +104,31 @@ export default function PosDashboard() {
     switch (status) {
       case "AVAILABLE":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100 uppercase tracking-wide">
+          <Badge variant="success">
             <CheckCircle2 className="h-3 w-3" />
             <span>Available</span>
-          </span>
+          </Badge>
         );
       case "ALLOCATED":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-100 uppercase tracking-wide">
+          <Badge variant="info">
             <Activity className="h-3 w-3 animate-pulse" />
             <span>Allocated</span>
-          </span>
+          </Badge>
         );
       case "MAINTENANCE":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 border border-amber-100 uppercase tracking-wide">
+          <Badge variant="warning">
             <Wrench className="h-3 w-3" />
             <span>Maintenance</span>
-          </span>
+          </Badge>
         );
       case "RETIRED":
         return (
-          <span className="inline-flex items-center space-x-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 border border-slate-200 uppercase tracking-wide">
+          <Badge variant="neutral">
             <XOctagon className="h-3 w-3" />
             <span>Retired</span>
-          </span>
+          </Badge>
         );
     }
   };

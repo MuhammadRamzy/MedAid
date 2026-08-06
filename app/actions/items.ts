@@ -5,6 +5,8 @@ import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { messageForAuthError } from "@/lib/auth/errors";
 import { validateAcquisition } from "@/lib/domain/acquisition";
 import * as itemsRepo from "@/lib/repositories/items";
+import { getUserProfile } from "@/lib/repositories/users";
+import { logActivity } from "@/lib/repositories/activity";
 import type { Condition, Item } from "@/lib/types";
 
 export async function getItemsAction(): Promise<Item[]> {
@@ -46,6 +48,17 @@ export async function createItemAction(data: {
       registeredBy: user.uid,
       acquisition: acquisitionResult.acquisition,
     });
+
+    const actorProfile = await getUserProfile(user.uid);
+    await logActivity({
+      actorUid: user.uid,
+      actorName: actorProfile?.name ?? user.email,
+      action: "ITEM_REGISTERED",
+      targetType: "item",
+      targetId: item.id,
+      summary: `Registered ${item.name} (${item.assetTag})`,
+    });
+
     revalidatePath("/");
     revalidatePath("/inventory");
     return { success: true, item };
@@ -62,8 +75,21 @@ export async function updateItemAction(
   updates: Partial<Pick<Item, "assetTag" | "name" | "category" | "condition" | "status">>
 ): Promise<{ success: boolean; item?: Item | null; error?: string }> {
   try {
-    await requireAdmin();
+    const user = await requireAdmin();
     const item = await itemsRepo.updateItem(id, updates);
+
+    if (item) {
+      const actorProfile = await getUserProfile(user.uid);
+      await logActivity({
+        actorUid: user.uid,
+        actorName: actorProfile?.name ?? user.email,
+        action: "ITEM_UPDATED",
+        targetType: "item",
+        targetId: item.id,
+        summary: `Updated ${item.name} (${item.assetTag})`,
+      });
+    }
+
     revalidatePath("/");
     revalidatePath("/inventory");
     return { success: true, item };
@@ -79,8 +105,22 @@ export async function deleteItemAction(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin();
+    const user = await requireAdmin();
+    const item = await itemsRepo.getItem(id);
     const success = await itemsRepo.deleteItem(id);
+
+    if (success && item) {
+      const actorProfile = await getUserProfile(user.uid);
+      await logActivity({
+        actorUid: user.uid,
+        actorName: actorProfile?.name ?? user.email,
+        action: "ITEM_DELETED",
+        targetType: "item",
+        targetId: id,
+        summary: `Deleted ${item.name} (${item.assetTag})`,
+      });
+    }
+
     revalidatePath("/");
     revalidatePath("/inventory");
     return { success };

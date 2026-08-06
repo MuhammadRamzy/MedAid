@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AllocationWithRefs, Contribution } from "@/lib/types";
 import { getAllocationsAction } from "@/app/actions/allocations";
 import { getContributionsForAllocationsAction } from "@/app/actions/contributions";
+import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -163,13 +164,10 @@ Thank you for your cooperation!`;
             <MessageSquare className="h-4 w-4" />
             <span>WhatsApp Receipt</span>
           </a>
-          <button
-            onClick={handlePrint}
-            className="flex items-center space-x-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 transition-all active:scale-[0.98]"
-          >
-            <Printer className="h-4 w-4" />
+          <Button onClick={handlePrint} size="sm">
+            <Printer />
             <span>Print Receipt</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -273,9 +271,15 @@ Thank you for your cooperation!`;
               <div className="my-3 border-b border-dashed border-black/80" />
               <div className="space-y-1 text-[10px]">
                 <h3 className="font-black text-[12px] uppercase">CONTRIBUTION RECEIVED</h3>
-                <p className="font-bold">
-                  ₹{totalContribution.toLocaleString("en-IN")} ({contributions[0].method.replace("_", " ")})
-                </p>
+                {contributions.map((c) => (
+                  <p key={c.id} className="font-bold">
+                    ₹{c.amount.toLocaleString("en-IN")} ({c.method.replace("_", " ")})
+                    {c.stage === "checkin" ? " — at return" : ""}
+                  </p>
+                ))}
+                {contributions.length > 1 && (
+                  <p className="font-black">Total: ₹{totalContribution.toLocaleString("en-IN")}</p>
+                )}
                 <p className="text-neutral-600">With thanks for supporting QIDMA Medical Aid.</p>
               </div>
             </>

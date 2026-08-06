@@ -15,26 +15,34 @@ config({ path: ".env.local" });
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
+import { isValidPin, generatePin } from "../lib/domain/pin";
 
 async function main() {
   const name = process.env.BOOTSTRAP_ADMIN_NAME;
   const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
   const mobile = process.env.BOOTSTRAP_ADMIN_MOBILE;
-  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!name || !email || !mobile || !password) {
+  if (!name || !email || !mobile) {
     throw new Error(
-      "Set BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_MOBILE and " +
-        "BOOTSTRAP_ADMIN_PASSWORD in .env.local first."
+      "Set BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_MOBILE in .env.local first."
     );
   }
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
       "Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY in .env.local first."
     );
+  }
+
+  // Login now uses a 6-digit PIN, not a free-form password. Accept one from
+  // BOOTSTRAP_ADMIN_PIN if it's valid; otherwise generate one so this script
+  // still works when that variable is missing or holds an old-style password.
+  const requestedPin = process.env.BOOTSTRAP_ADMIN_PIN;
+  const pin = requestedPin && isValidPin(requestedPin) ? requestedPin : generatePin();
+  if (requestedPin && !isValidPin(requestedPin)) {
+    console.warn(`BOOTSTRAP_ADMIN_PIN "${requestedPin}" is not 6 digits — generated a new one instead.`);
   }
 
   const app = initializeApp({
@@ -49,7 +57,7 @@ async function main() {
     return;
   }
 
-  const user = await adminAuth.createUser({ email, password, displayName: name });
+  const user = await adminAuth.createUser({ email, password: pin, displayName: name });
   await adminAuth.setCustomUserClaims(user.uid, { role: "admin" });
   await adminDb.collection("users").doc(user.uid).set({
     name,
@@ -62,7 +70,9 @@ async function main() {
     lastLoginAt: null,
   });
 
-  console.log(`Created administrator ${email}. Sign in, then clear the BOOTSTRAP_* values.`);
+  console.log(`Created administrator ${email}.`);
+  console.log(`PIN: ${pin}`);
+  console.log("Sign in, then clear the BOOTSTRAP_* values.");
 }
 
 main().catch((error) => {
