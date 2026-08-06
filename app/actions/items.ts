@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { messageForAuthError } from "@/lib/auth/errors";
 import { validateAcquisition } from "@/lib/domain/acquisition";
+import { suggestAssetTag } from "@/lib/domain/assetTag";
 import * as itemsRepo from "@/lib/repositories/items";
 import { getUserProfile } from "@/lib/repositories/users";
 import { logActivity } from "@/lib/repositories/activity";
@@ -16,6 +17,28 @@ export async function getItemsAction(): Promise<Item[]> {
   } catch (error) {
     console.error("getItemsAction failed:", error);
     return [];
+  }
+}
+
+export async function suggestAssetTagAction(
+  category: string
+): Promise<{ success: boolean; tag?: string; error?: string }> {
+  try {
+    await requireAdmin();
+    const existingTags = await itemsRepo.listAssetTags();
+    const tag = suggestAssetTag(category, existingTags);
+    if (!tag) {
+      return {
+        success: false,
+        error: "Every tag for this category is already in use — enter one manually.",
+      };
+    }
+    return { success: true, tag };
+  } catch (error) {
+    const authMessage = messageForAuthError(error);
+    if (authMessage) return { success: false, error: authMessage };
+    console.error("suggestAssetTagAction failed:", error);
+    return { success: false, error: "Could not suggest a tag." };
   }
 }
 

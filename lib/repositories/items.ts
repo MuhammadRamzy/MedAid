@@ -38,6 +38,12 @@ export async function assetTagExists(assetTag: string): Promise<boolean> {
   return !snapshot.empty;
 }
 
+/** Every asset tag currently in the inventory — used to suggest one that isn't taken. */
+export async function listAssetTags(): Promise<string[]> {
+  const snapshot = await items().select("assetTag").get();
+  return snapshot.docs.map((doc) => doc.data().assetTag as string);
+}
+
 export interface CreateItemInput {
   assetTag: string;
   name: string;

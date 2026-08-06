@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { createItemAction } from "@/app/actions/items";
+import { createItemAction, suggestAssetTagAction } from "@/app/actions/items";
 import type { Condition } from "@/lib/types";
 import { useCurrentUser } from "@/components/nav-context";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function AddItemPage() {
   const [estimatedValue, setEstimatedValue] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuggestingTag, setIsSuggestingTag] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Disable submit until the form is actually completable, rather than only
@@ -44,11 +45,20 @@ export default function AddItemPage() {
         ? contributorName.trim().length > 0
         : false);
 
-  // Suggest a tag based on category
-  const handleSuggestTag = () => {
-    const prefix = category.substring(0, 3).toUpperCase();
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    setAssetTag(`KMCC-${prefix}-${randomNum}`);
+  // Suggest a tag based on category, checked server-side against every tag
+  // already in the inventory so it never collides with an existing device.
+  const handleSuggestTag = async () => {
+    setIsSuggestingTag(true);
+    try {
+      const result = await suggestAssetTagAction(category);
+      if (result.success && result.tag) {
+        setAssetTag(result.tag);
+      } else {
+        toast.error(result.error ?? "Could not suggest a tag.");
+      }
+    } finally {
+      setIsSuggestingTag(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,9 +207,10 @@ export default function AddItemPage() {
               <button
                 type="button"
                 onClick={handleSuggestTag}
-                className="text-[10px] font-bold text-teal-800 hover:text-teal-700 underline"
+                disabled={isSuggestingTag}
+                className="text-[10px] font-bold text-teal-800 hover:text-teal-700 underline disabled:opacity-50"
               >
-                Auto-generate tag
+                {isSuggestingTag ? "Generating…" : "Auto-generate tag"}
               </button>
             </div>
             <div className="relative">
