@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { clientAuth, googleProvider } from "@/lib/firebase/client";
+import { Button } from "@/components/ui/button";
 import { Loader2, LogIn, KeyRound } from "lucide-react";
 
 /** Google's "G" mark, inline so the button needs no external asset. */
@@ -144,15 +145,17 @@ export default function LoginPage() {
           </div>
         )}
 
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="lg"
           onClick={handleGoogleSignIn}
           disabled={busy !== null}
-          className="flex w-full items-center justify-center space-x-2.5 rounded-xl border border-input bg-card py-3.5 font-bold text-foreground transition-all hover:bg-muted active:scale-[0.98] disabled:opacity-60"
+          className="w-full"
         >
-          {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleMark />}
+          {busy === "google" ? <Loader2 className="animate-spin" /> : <GoogleMark />}
           <span>{busy === "google" ? "Signing in..." : "Continue with Google"}</span>
-        </button>
+        </Button>
 
         <div className="flex items-center space-x-3">
           <div className="h-px flex-1 bg-border" />
@@ -196,14 +199,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={busy !== null || pin.length !== 6}
-            className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground transition-all active:scale-[0.98] disabled:opacity-60"
-          >
-            {busy === "pin" ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
+          <Button type="submit" size="lg" disabled={busy !== null || pin.length !== 6} className="w-full">
+            {busy === "pin" ? <Loader2 className="animate-spin" /> : <LogIn />}
             <span>{busy === "pin" ? "Signing in..." : "Sign In"}</span>
-          </button>
+          </Button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">

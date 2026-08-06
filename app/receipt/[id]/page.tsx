@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AllocationWithRefs, Contribution } from "@/lib/types";
 import { getAllocationsAction } from "@/app/actions/allocations";
 import { getContributionsForAllocationsAction } from "@/app/actions/contributions";
+import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft, Loader2, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -163,13 +164,10 @@ Thank you for your cooperation!`;
             <MessageSquare className="h-4 w-4" />
             <span>WhatsApp Receipt</span>
           </a>
-          <button
-            onClick={handlePrint}
-            className="flex items-center space-x-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 transition-all active:scale-[0.98]"
-          >
-            <Printer className="h-4 w-4" />
+          <Button onClick={handlePrint} size="sm">
+            <Printer />
             <span>Print Receipt</span>
-          </button>
+          </Button>
         </div>
       </div>
 

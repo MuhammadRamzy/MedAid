@@ -231,6 +231,14 @@ export function CheckoutCart({
     }
   }, [beneficiaries, selectedBeneficiaryId]);
 
+  // Disables the confirm slider until the checkout is actually completable,
+  // rather than only surfacing missing fields after a failed submit.
+  const isBeneficiaryValid =
+    beneficiaryMode === "existing"
+      ? selectedBeneficiaryId.length > 0
+      : newBenName.trim().length > 0 && newBenPhone.trim().length > 3 && newBenAddress.trim().length > 0;
+  const isFormValid = cartItems.length > 0 && isBeneficiaryValid && expectedReturnDate.length > 0;
+
   if (!isOpen) return null;
 
   const handleCheckout = async (e?: React.FormEvent) => {
@@ -581,7 +589,7 @@ export function CheckoutCart({
         <div className="border-t border-border bg-card p-4 flex-shrink-0">
           <SlideToConfirm
             onConfirm={handleCheckout}
-            disabled={cartItems.length === 0}
+            disabled={!isFormValid}
             isLoading={isSubmitting}
           />
         </div>
