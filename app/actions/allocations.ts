@@ -8,6 +8,7 @@ import * as allocationsRepo from "@/lib/repositories/allocations";
 import { ItemUnavailableError } from "@/lib/repositories/allocations";
 import * as beneficiariesRepo from "@/lib/repositories/beneficiaries";
 import { getUserProfile } from "@/lib/repositories/users";
+import { logActivity } from "@/lib/repositories/activity";
 import type { Allocation, AllocationWithRefs, Beneficiary, Condition, ContributionInput } from "@/lib/types";
 
 export async function getAllocationsAction(): Promise<AllocationWithRefs[]> {
@@ -71,6 +72,15 @@ export async function createAllocationAction(data: {
       contribution,
     });
 
+    await logActivity({
+      actorUid: user.uid,
+      actorName: actingProfile?.name ?? user.email,
+      action: "ALLOCATED",
+      targetType: "allocation",
+      targetId: allocation.id,
+      summary: `Gave out to ${beneficiary.name} (receipt ${allocation.receiptNumber})`,
+    });
+
     revalidatePath("/");
     revalidatePath("/allocations");
     return { success: true, allocation };
@@ -112,6 +122,15 @@ export async function returnAllocationAction(data: {
     });
 
     if (!allocation) return { success: false, error: "Allocation not found." };
+
+    await logActivity({
+      actorUid: user.uid,
+      actorName: actingProfile?.name ?? user.email,
+      action: "CHECKED_IN",
+      targetType: "allocation",
+      targetId: allocation.id,
+      summary: `Checked in receipt ${allocation.receiptNumber} — condition: ${data.conditionOnReturn}`,
+    });
 
     revalidatePath("/");
     revalidatePath("/allocations");
