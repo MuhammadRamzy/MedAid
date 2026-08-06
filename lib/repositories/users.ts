@@ -185,6 +185,24 @@ export async function approveUser(uid: string): Promise<void> {
 }
 
 /**
+ * A signed-in user editing their own name/mobile — deliberately narrower
+ * than the admin-only setUserRole/setUserDisabled above: nothing here can
+ * touch role, approved or disabled.
+ */
+export async function updateOwnProfile(
+  uid: string,
+  updates: { name: string; mobile: string }
+): Promise<void> {
+  await users().doc(uid).update({ name: updates.name, mobile: updates.mobile });
+  await adminAuth.updateUser(uid, { displayName: updates.name });
+}
+
+/** Changes the Firebase Auth password backing a user's PIN sign-in. */
+export async function changeOwnPin(uid: string, newPin: string): Promise<void> {
+  await adminAuth.updateUser(uid, { password: newPin });
+}
+
+/**
  * Removes the account entirely — both the Firebase Auth user and the
  * Firestore profile. Historical allocations are unaffected: they store the
  * acting user's name at the time of the action rather than looking it up

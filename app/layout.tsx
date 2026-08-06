@@ -7,6 +7,7 @@ import { DesktopNav } from "@/components/desktop-nav";
 import { PWARegister } from "@/components/pwa-register";
 import { CurrentUserProvider } from "@/components/nav-context";
 import { SignOutButton } from "@/components/sign-out-button";
+import { ProfileLink } from "@/components/profile-link";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -80,6 +81,7 @@ export default function RootLayout({
                 <span className="hidden md:inline-block rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[11px] font-bold text-primary">
                   Kerala Chapter
                 </span>
+                <ProfileLink />
                 <SignOutButton />
               </div>
             </div>
