@@ -4,18 +4,19 @@ import { useState, useEffect } from "react";
 import { AllocationWithRefs, Condition, DerivedAllocationStatus } from "@/lib/types";
 import { RETURN_CONDITIONS } from "@/lib/domain/condition";
 import { getAllocationsAction, returnAllocationAction } from "@/app/actions/allocations";
-import { 
-  Search, 
-  Calendar, 
-  User, 
-  Phone, 
-  MapPin, 
-  Clipboard, 
-  ArrowLeftRight, 
-  X, 
+import {
+  Search,
+  Calendar,
+  User,
+  Phone,
+  MapPin,
+  Clipboard,
+  ArrowLeftRight,
+  X,
   Printer,
   ClipboardList,
-  MessageSquare
+  MessageSquare,
+  HeartHandshake
 } from "lucide-react";
 import Link from "next/link";
 
@@ -28,8 +29,23 @@ export default function AllocationsPage() {
   // Return Modal State
   const [selectedAlloc, setSelectedAlloc] = useState<AllocationWithRefs | null>(null);
   const [conditionOnReturn, setConditionOnReturn] = useState<Condition>("Good");
+  const [actualReturnedAt, setActualReturnedAt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check-in contribution (optional, collapsed by default)
+  const [showContribution, setShowContribution] = useState(false);
+  const [contributionAmount, setContributionAmount] = useState("");
+  const [contributionMethod, setContributionMethod] = useState<"cash" | "upi" | "bank_transfer">("cash");
+  const [contributionReference, setContributionReference] = useState("");
+
+  const todayIsoDate = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
   const loadAllocations = async () => {
     try {
@@ -84,6 +100,11 @@ export default function AllocationsPage() {
     setConditionOnReturn(
       current && RETURN_CONDITIONS.includes(current) ? current : "Good"
     );
+    setActualReturnedAt(todayIsoDate());
+    setShowContribution(false);
+    setContributionAmount("");
+    setContributionMethod("cash");
+    setContributionReference("");
     setError(null);
   };
 
@@ -99,10 +120,20 @@ export default function AllocationsPage() {
     setError(null);
 
     try {
+      const contribution =
+        showContribution && contributionAmount.trim()
+          ? {
+              amount: Number(contributionAmount),
+              method: contributionMethod,
+              reference: contributionReference.trim(),
+            }
+          : undefined;
+
       const res = await returnAllocationAction({
         allocationId: selectedAlloc.id,
         conditionOnReturn,
-        actualReturnedAt: new Date().toISOString(),
+        actualReturnedAt: new Date(actualReturnedAt).toISOString(),
+        contribution,
       });
 
       if (!res.success) {
@@ -445,6 +476,25 @@ Thank you.`;
                 </div>
               </div>
 
+              {/* Actual Return Date */}
+              <div className="space-y-2">
+                <label className="flex items-center space-x-1.5 text-xs font-bold text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5 text-teal-700" />
+                  <span>Actual Return Date</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  max={todayIsoDate()}
+                  value={actualReturnedAt}
+                  onChange={(e) => setActualReturnedAt(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-[10px] text-muted-foreground italic">
+                  Defaults to today — change this if the equipment actually came back earlier.
+                </p>
+              </div>
+
               {/* Condition Selection */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground">Condition on Check-In</label>
@@ -461,6 +511,77 @@ Thank you.`;
                 <p className="text-[10px] text-muted-foreground italic">
                   * Selecting &ldquo;Needs Repair&rdquo; routes the item to maintenance. &ldquo;Retired&rdquo; removes it from active service.
                 </p>
+              </div>
+
+              {/* Beneficiary Contribution (optional, collapsed by default) */}
+              <div className="space-y-2">
+                {!showContribution ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowContribution(true)}
+                    className="flex items-center space-x-1.5 text-sm font-semibold text-teal-700 hover:text-teal-800"
+                  >
+                    <HeartHandshake className="h-4 w-4" />
+                    <span>Add contribution (optional)</span>
+                  </button>
+                ) : (
+                  <div className="space-y-3 rounded-xl border border-border p-4 bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <h3 className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <HeartHandshake className="h-3.5 w-3.5 text-teal-700" />
+                        <span>Beneficiary Contribution</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowContribution(false);
+                          setContributionAmount("");
+                          setContributionReference("");
+                        }}
+                        className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Amount (INR)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        value={contributionAmount}
+                        onChange={(e) => setContributionAmount(e.target.value)}
+                        placeholder="e.g. 500"
+                        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Payment Method</label>
+                      <select
+                        value={contributionMethod}
+                        onChange={(e) => setContributionMethod(e.target.value as "cash" | "upi" | "bank_transfer")}
+                        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Reference (optional)</label>
+                      <input
+                        type="text"
+                        value={contributionReference}
+                        onChange={(e) => setContributionReference(e.target.value)}
+                        placeholder="e.g. UPI transaction ID"
+                        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

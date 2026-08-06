@@ -273,9 +273,15 @@ Thank you for your cooperation!`;
               <div className="my-3 border-b border-dashed border-black/80" />
               <div className="space-y-1 text-[10px]">
                 <h3 className="font-black text-[12px] uppercase">CONTRIBUTION RECEIVED</h3>
-                <p className="font-bold">
-                  ₹{totalContribution.toLocaleString("en-IN")} ({contributions[0].method.replace("_", " ")})
-                </p>
+                {contributions.map((c) => (
+                  <p key={c.id} className="font-bold">
+                    ₹{c.amount.toLocaleString("en-IN")} ({c.method.replace("_", " ")})
+                    {c.stage === "checkin" ? " — at return" : ""}
+                  </p>
+                ))}
+                {contributions.length > 1 && (
+                  <p className="font-black">Total: ₹{totalContribution.toLocaleString("en-IN")}</p>
+                )}
                 <p className="text-neutral-600">With thanks for supporting QIDMA Medical Aid.</p>
               </div>
             </>
