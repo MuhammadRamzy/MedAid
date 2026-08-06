@@ -16,9 +16,13 @@ import {
   Printer,
   ClipboardList,
   MessageSquare,
-  HeartHandshake
+  HeartHandshake,
+  Clock,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 export default function AllocationsPage() {
   const [allocations, setAllocations] = useState<AllocationWithRefs[]>([]);
@@ -153,21 +157,24 @@ export default function AllocationsPage() {
     switch (status) {
       case "ACTIVE":
         return (
-          <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-700 border border-teal-100 uppercase tracking-wide">
-            Active
-          </span>
+          <Badge>
+            <Clock className="h-3 w-3" />
+            <span>Active</span>
+          </Badge>
         );
       case "OVERDUE":
         return (
-          <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 border border-rose-100 uppercase tracking-wide animate-pulse">
-            Overdue
-          </span>
+          <Badge variant="destructive" className="animate-pulse">
+            <AlertTriangle className="h-3 w-3" />
+            <span>Overdue</span>
+          </Badge>
         );
       case "RETURNED":
         return (
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600 border border-slate-200 uppercase tracking-wide">
-            Returned
-          </span>
+          <Badge variant="neutral">
+            <CheckCircle2 className="h-3 w-3" />
+            <span>Returned</span>
+          </Badge>
         );
     }
   };
