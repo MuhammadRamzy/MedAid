@@ -7,6 +7,7 @@ import { validateContribution } from "@/lib/domain/contribution";
 import * as allocationsRepo from "@/lib/repositories/allocations";
 import { ItemUnavailableError } from "@/lib/repositories/allocations";
 import * as beneficiariesRepo from "@/lib/repositories/beneficiaries";
+import { getUserProfile } from "@/lib/repositories/users";
 import type { Allocation, AllocationWithRefs, Beneficiary, Condition, ContributionInput } from "@/lib/types";
 
 export async function getAllocationsAction(): Promise<AllocationWithRefs[]> {
@@ -38,6 +39,7 @@ export async function createAllocationAction(data: {
 }): Promise<{ success: boolean; allocation?: Allocation; error?: string }> {
   try {
     const user = await requireUser();
+    const actingProfile = await getUserProfile(user.uid);
 
     const beneficiary = data.beneficiary.id
       ? await beneficiariesRepo.getBeneficiary(data.beneficiary.id)
@@ -65,6 +67,7 @@ export async function createAllocationAction(data: {
       expectedReturnAt: new Date(data.expectedReturnAt).toISOString(),
       notes: data.notes,
       allocatedBy: user.uid,
+      allocatedByName: actingProfile?.name ?? user.email,
       contribution,
     });
 
@@ -86,15 +89,26 @@ export async function returnAllocationAction(data: {
   allocationId: string;
   conditionOnReturn: Condition;
   actualReturnedAt: string;
+  contribution?: unknown;
 }): Promise<{ success: boolean; allocation?: Allocation; error?: string }> {
   try {
     const user = await requireUser();
+    const actingProfile = await getUserProfile(user.uid);
+
+    let contribution: ContributionInput | undefined;
+    if (data.contribution) {
+      const result = validateContribution(data.contribution);
+      if (!result.valid) return { success: false, error: result.error };
+      contribution = result.contribution;
+    }
 
     const allocation = await allocationsRepo.returnAllocation({
       allocationId: data.allocationId,
       actualReturnedAt: new Date(data.actualReturnedAt).toISOString(),
       conditionOnReturn: data.conditionOnReturn,
       checkedInBy: user.uid,
+      checkedInByName: actingProfile?.name ?? user.email,
+      contribution,
     });
 
     if (!allocation) return { success: false, error: "Allocation not found." };
