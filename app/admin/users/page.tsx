@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { ArrowLeft, Loader2, MessageSquare, Plus, ShieldCheck, ShieldOff, Trash2, UserX } from "lucide-react";
 import { useCurrentUser } from "@/components/nav-context";
+import { useConfirm } from "@/components/use-confirm";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   getUsersAction,
   createUserAction,
@@ -15,6 +19,7 @@ import type { UserProfile, UserRole } from "@/lib/types";
 
 export default function VolunteersPage() {
   const { user, loading: loadingSession } = useCurrentUser();
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -77,6 +82,7 @@ export default function VolunteersPage() {
       setEmail("");
       setRole("volunteer");
       await loadUsers();
+      toast.success(`Account created for ${res.profile.name}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -85,50 +91,75 @@ export default function VolunteersPage() {
   };
 
   const handleToggleDisabled = async (u: UserProfile) => {
-    const confirmMessage = u.disabled
-      ? `Re-enable ${u.name}'s account?`
-      : `Disable ${u.name}'s account? They will be signed out immediately.`;
-    if (!window.confirm(confirmMessage)) return;
+    const ok = await confirm(
+      u.disabled
+        ? { title: "Re-enable account?", description: `${u.name} will be able to sign in again.`, confirmLabel: "Re-enable" }
+        : {
+            title: "Disable account?",
+            description: `${u.name} will be signed out immediately and unable to sign back in until re-enabled.`,
+            confirmLabel: "Disable",
+            variant: "destructive",
+          }
+    );
+    if (!ok) return;
 
     setBusyUid(u.uid);
     const res = await setUserDisabledAction(u.uid, !u.disabled);
     setBusyUid(null);
     if (!res.success) {
-      window.alert(res.error || "Could not update the account.");
+      toast.error(res.error || "Could not update the account.");
       return;
     }
+    toast.success(u.disabled ? `${u.name} re-enabled` : `${u.name} disabled`);
     await loadUsers();
   };
 
   const handleToggleRole = async (u: UserProfile) => {
     const nextRole: UserRole = u.role === "admin" ? "volunteer" : "admin";
-    const confirmMessage =
+    const ok = await confirm(
       nextRole === "admin"
-        ? `Make ${u.name} an administrator? They will get full access to devices, volunteers and records.`
-        : `Remove ${u.name}'s administrator access? They will be signed out immediately.`;
-    if (!window.confirm(confirmMessage)) return;
+        ? {
+            title: "Make this user an administrator?",
+            description: `${u.name} will get full access to devices, volunteers and records.`,
+            confirmLabel: "Make Admin",
+          }
+        : {
+            title: "Remove administrator access?",
+            description: `${u.name} will be signed out immediately and revert to a volunteer account.`,
+            confirmLabel: "Remove Admin",
+            variant: "destructive",
+          }
+    );
+    if (!ok) return;
 
     setBusyUid(u.uid);
     const res = await setUserRoleAction(u.uid, nextRole);
     setBusyUid(null);
     if (!res.success) {
-      window.alert(res.error || "Could not update the account.");
+      toast.error(res.error || "Could not update the account.");
       return;
     }
+    toast.success(`${u.name} is now ${nextRole === "admin" ? "an administrator" : "a volunteer"}`);
     await loadUsers();
   };
 
   const handleDelete = async (u: UserProfile) => {
-    const confirmMessage = `Permanently delete ${u.name}'s account? This cannot be undone. Their past activity in the ledger stays on record.`;
-    if (!window.confirm(confirmMessage)) return;
+    const ok = await confirm({
+      title: "Permanently delete this account?",
+      description: `This cannot be undone. ${u.name}'s past activity stays on record in the ledger and Activity Log.`,
+      confirmLabel: "Delete Account",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setBusyUid(u.uid);
     const res = await deleteUserAction(u.uid);
     setBusyUid(null);
     if (!res.success) {
-      window.alert(res.error || "Could not delete the account.");
+      toast.error(res.error || "Could not delete the account.");
       return;
     }
+    toast.success(`${u.name}'s account was deleted`);
     await loadUsers();
   };
 
@@ -140,6 +171,8 @@ export default function VolunteersPage() {
 
   return (
     <div className="animate-page space-y-6">
+      {ConfirmDialog}
+
       <Link
         href="/admin"
         className="inline-flex items-center space-x-2 text-xs font-bold text-muted-foreground transition-colors hover:text-primary"
@@ -213,14 +246,10 @@ export default function VolunteersPage() {
           </div>
 
           <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex w-full items-center justify-center space-x-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 sm:w-auto"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+              {isSubmitting ? <Loader2 className="animate-spin" /> : <Plus />}
               <span>{isSubmitting ? "Creating..." : "Create Account"}</span>
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -277,15 +306,16 @@ export default function VolunteersPage() {
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-bold text-foreground">{u.name}</span>
                       {u.role === "admin" && (
-                        <span className="inline-flex items-center space-x-1 rounded-full border border-teal-100 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                        <Badge>
                           <ShieldCheck className="h-3 w-3" />
                           <span>Admin</span>
-                        </span>
+                        </Badge>
                       )}
                       {u.disabled && (
-                        <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
-                          Disabled
-                        </span>
+                        <Badge variant="neutral">
+                          <UserX className="h-3 w-3" />
+                          <span>Disabled</span>
+                        </Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -294,33 +324,36 @@ export default function VolunteersPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleToggleRole(u)}
                       disabled={isSelf || isBusy}
                       title={isSelf ? "You cannot change your own role." : undefined}
-                      className="flex items-center space-x-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      {u.role === "admin" ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                      {u.role === "admin" ? <ShieldOff /> : <ShieldCheck />}
                       <span>{u.role === "admin" ? "Remove Admin" : "Make Admin"}</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleToggleDisabled(u)}
                       disabled={isSelf || isBusy}
                       title={isSelf ? "You cannot disable your own account." : undefined}
-                      className="flex items-center space-x-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <UserX className="h-3.5 w-3.5" />
+                      <UserX />
                       <span>{u.disabled ? "Enable" : "Disable"}</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDelete(u)}
                       disabled={isSelf || isBusy}
                       title={isSelf ? "You cannot delete your own account." : undefined}
-                      className="flex items-center space-x-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 />
                       <span>Delete</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
