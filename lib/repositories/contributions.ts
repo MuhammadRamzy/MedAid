@@ -57,3 +57,9 @@ export async function listContributionsForAllocations(
   const snapshot = await contributions().where("allocationId", "in", allocationIds).get();
   return snapshot.docs.map((doc) => toContribution(doc.id, doc.data()));
 }
+
+/** Every contribution ever recorded — used to total up the dashboard's INR figure. */
+export async function listAllContributions(): Promise<Contribution[]> {
+  const snapshot = await contributions().get();
+  return snapshot.docs.map((doc) => toContribution(doc.id, doc.data()));
+}
