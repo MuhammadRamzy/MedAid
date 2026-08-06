@@ -241,13 +241,17 @@ export default function PosDashboard() {
         </div>
 
         {/* Availability Toggle */}
-        <label className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showAllStatuses}
+          onClick={() => setShowAllStatuses((v) => !v)}
+          className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm transition-colors hover:bg-muted/50 active:scale-[0.99]"
+        >
           <span className="font-semibold text-muted-foreground">
             {showAllStatuses ? "Showing all equipment" : "Showing available equipment only"}
           </span>
-          <button
-            type="button"
-            onClick={() => setShowAllStatuses((v) => !v)}
+          <span
             className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
               showAllStatuses ? "bg-primary" : "bg-muted"
             }`}
@@ -257,8 +261,8 @@ export default function PosDashboard() {
                 showAllStatuses ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
-          </button>
-        </label>
+          </span>
+        </button>
       </div>
 
       {/* Inventory Grid */}

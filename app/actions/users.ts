@@ -127,6 +127,35 @@ export async function setUserRoleAction(
   }
 }
 
+export async function approveUserAction(
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = await requireAdmin();
+
+    const target = await usersRepo.getUserProfile(uid);
+    await usersRepo.approveUser(uid);
+
+    const adminProfile = await usersRepo.getUserProfile(admin.uid);
+    await logActivity({
+      actorUid: admin.uid,
+      actorName: adminProfile?.name ?? admin.email,
+      action: "USER_APPROVED",
+      targetType: "user",
+      targetId: uid,
+      summary: `Approved ${target?.name ?? "an account"}`,
+    });
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    const authMessage = messageForAuthError(error);
+    if (authMessage) return { success: false, error: authMessage };
+    console.error("approveUserAction failed:", error);
+    return { success: false, error: "Could not approve the account." };
+  }
+}
+
 export async function deleteUserAction(
   uid: string
 ): Promise<{ success: boolean; error?: string }> {

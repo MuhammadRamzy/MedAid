@@ -5,7 +5,8 @@ import Image from "next/image";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { clientAuth, googleProvider } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogIn, KeyRound } from "lucide-react";
+import { selfRegisterAction } from "@/app/actions/auth";
+import { Loader2, LogIn, KeyRound, UserPlus, CheckCircle2 } from "lucide-react";
 
 /** Google's "G" mark, inline so the button needs no external asset. */
 function GoogleMark() {
@@ -78,7 +79,7 @@ function messageForAuthCode(code: string | undefined): string {
   }
 }
 
-export default function LoginPage() {
+function SignInForm() {
   const [email, setEmail] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +124,196 @@ export default function LoginPage() {
   };
 
   return (
+    <div className="space-y-6">
+      {error && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          {error}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        onClick={handleGoogleSignIn}
+        disabled={busy !== null}
+        className="w-full"
+      >
+        {busy === "google" ? <Loader2 className="animate-spin" /> : <GoogleMark />}
+        <span>{busy === "google" ? "Signing in..." : "Continue with Google"}</span>
+      </Button>
+
+      <div className="flex items-center space-x-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={handlePinSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-sm font-bold text-muted-foreground">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="pin" className="flex items-center space-x-1.5 text-sm font-bold text-muted-foreground">
+            <KeyRound className="h-3.5 w-3.5" />
+            <span>6-Digit PIN</span>
+          </label>
+          <input
+            id="pin"
+            type="password"
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            required
+            autoComplete="one-time-code"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-center text-2xl font-bold tracking-[0.6em] focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <Button type="submit" size="lg" disabled={busy !== null || pin.length !== 6} className="w-full">
+          {busy === "pin" ? <Loader2 className="animate-spin" /> : <LogIn />}
+          <span>{busy === "pin" ? "Signing in..." : "Sign In"}</span>
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function CreateAccountForm({ onDone }: { onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("+91");
+  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const isValid = name.trim().length > 0 && mobile.trim().length > 3 && email.trim().length > 0 && pin.length === 6;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    const res = await selfRegisterAction({ name: name.trim(), mobile: mobile.trim(), email: email.trim(), pin });
+    setBusy(false);
+
+    if (!res.success) {
+      setError(res.error || "Could not create the account.");
+      return;
+    }
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
+        <div>
+          <h3 className="text-sm font-bold text-emerald-900">Request submitted</h3>
+          <p className="mt-1 text-xs text-emerald-700">
+            An administrator needs to approve your account before you can sign in. Check back soon, or ask them
+            directly.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>
+          Back to Sign In
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          {error}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Create your own sign-in. An administrator reviews and approves new accounts before they can be used.
+      </p>
+
+      <div className="space-y-1">
+        <label className="text-sm font-bold text-muted-foreground">Full Name</label>
+        <input
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-bold text-muted-foreground">WhatsApp Number</label>
+        <input
+          type="tel"
+          required
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
+          className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-bold text-muted-foreground">Email</label>
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="flex items-center space-x-1.5 text-sm font-bold text-muted-foreground">
+          <KeyRound className="h-3.5 w-3.5" />
+          <span>Choose a 6-Digit PIN</span>
+        </label>
+        <input
+          type="password"
+          inputMode="numeric"
+          pattern="\d{6}"
+          maxLength={6}
+          required
+          autoComplete="one-time-code"
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="••••••"
+          className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-center text-2xl font-bold tracking-[0.6em] focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <p className="text-[10px] text-muted-foreground">This is what you&apos;ll sign in with, alongside your email.</p>
+      </div>
+
+      <Button type="submit" size="lg" disabled={busy || !isValid} className="w-full">
+        {busy ? <Loader2 className="animate-spin" /> : <UserPlus />}
+        <span>{busy ? "Submitting..." : "Request Access"}</span>
+      </Button>
+    </form>
+  );
+}
+
+export default function LoginPage() {
+  const [mode, setMode] = useState<"signin" | "create">("signin");
+
+  return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="space-y-3 text-center">
@@ -139,75 +330,28 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-medium text-destructive">
-            {error}
-          </div>
-        )}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={handleGoogleSignIn}
-          disabled={busy !== null}
-          className="w-full"
-        >
-          {busy === "google" ? <Loader2 className="animate-spin" /> : <GoogleMark />}
-          <span>{busy === "google" ? "Signing in..." : "Continue with Google"}</span>
-        </Button>
-
-        <div className="flex items-center space-x-3">
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">or</span>
-          <div className="h-px flex-1 bg-border" />
+        <div className="flex rounded-lg border border-border p-0.5 bg-muted">
+          <button
+            type="button"
+            onClick={() => setMode("signin")}
+            className={`flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all ${
+              mode === "signin" ? "bg-card text-teal-800 shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("create")}
+            className={`flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all ${
+              mode === "create" ? "bg-card text-teal-800 shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Create Account
+          </button>
         </div>
 
-        <form onSubmit={handlePinSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-sm font-bold text-muted-foreground">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="pin" className="flex items-center space-x-1.5 text-sm font-bold text-muted-foreground">
-              <KeyRound className="h-3.5 w-3.5" />
-              <span>6-Digit PIN</span>
-            </label>
-            <input
-              id="pin"
-              type="password"
-              inputMode="numeric"
-              pattern="\d{6}"
-              maxLength={6}
-              required
-              autoComplete="one-time-code"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="••••••"
-              className="w-full rounded-xl border border-input bg-card px-3.5 py-3 text-center text-2xl font-bold tracking-[0.6em] focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <Button type="submit" size="lg" disabled={busy !== null || pin.length !== 6} className="w-full">
-            {busy === "pin" ? <Loader2 className="animate-spin" /> : <LogIn />}
-            <span>{busy === "pin" ? "Signing in..." : "Sign In"}</span>
-          </Button>
-        </form>
-
-        <p className="text-center text-xs text-muted-foreground">
-          New here? Sign in with Google — an administrator grants access from there.
-        </p>
+        {mode === "signin" ? <SignInForm /> : <CreateAccountForm onDone={() => setMode("signin")} />}
       </div>
     </div>
   );

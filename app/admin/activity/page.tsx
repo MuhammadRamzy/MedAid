@@ -7,6 +7,7 @@ import {
   ScrollText,
   Loader2,
   UserPlus,
+  UserCog,
   ShieldCheck,
   UserX,
   UserCheck,
@@ -23,6 +24,8 @@ import type { ActivityEntry } from "@/lib/repositories/activity";
 
 const ICONS: Record<ActivityAction, typeof UserPlus> = {
   USER_CREATED: UserPlus,
+  USER_SELF_REGISTERED: UserCog,
+  USER_APPROVED: UserCheck,
   USER_ROLE_CHANGED: ShieldCheck,
   USER_DISABLED: UserX,
   USER_ENABLED: UserCheck,
@@ -36,6 +39,8 @@ const ICONS: Record<ActivityAction, typeof UserPlus> = {
 
 const TONES: Record<ActivityAction, string> = {
   USER_CREATED: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  USER_SELF_REGISTERED: "bg-amber-50 text-amber-700 border-amber-100",
+  USER_APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-100",
   USER_ROLE_CHANGED: "bg-teal-50 text-teal-700 border-teal-100",
   USER_DISABLED: "bg-amber-50 text-amber-700 border-amber-100",
   USER_ENABLED: "bg-emerald-50 text-emerald-700 border-emerald-100",

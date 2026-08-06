@@ -1,5 +1,7 @@
 export type ActivityAction =
   | "USER_CREATED"
+  | "USER_SELF_REGISTERED"
+  | "USER_APPROVED"
   | "USER_ROLE_CHANGED"
   | "USER_DISABLED"
   | "USER_ENABLED"
@@ -17,6 +19,10 @@ export function labelForAction(action: ActivityAction): string {
   switch (action) {
     case "USER_CREATED":
       return "Account created";
+    case "USER_SELF_REGISTERED":
+      return "Requested access";
+    case "USER_APPROVED":
+      return "Account approved";
     case "USER_ROLE_CHANGED":
       return "Role changed";
     case "USER_DISABLED":

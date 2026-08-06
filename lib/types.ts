@@ -70,6 +70,10 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   disabled: boolean;
+  // A self-registered account (PIN or Google) can't sign in until an admin
+  // approves it. Admin-created accounts are approved by construction — the
+  // admin creating one already is the approval.
+  approved: boolean;
   createdAt: string;
   createdBy: string;
   lastLoginAt: string | null;

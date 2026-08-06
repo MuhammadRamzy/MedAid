@@ -30,6 +30,12 @@ export async function POST(request: Request) {
     if (profile.disabled) {
       return NextResponse.json({ error: "This account is disabled." }, { status: 403 });
     }
+    if (!profile.approved) {
+      return NextResponse.json(
+        { error: "Your account is awaiting administrator approval. Please check back soon." },
+        { status: 403 }
+      );
+    }
 
     await recordLogin(decoded.uid);
 

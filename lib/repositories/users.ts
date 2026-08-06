@@ -14,6 +14,10 @@ function toProfile(uid: string, data: FirebaseFirestore.DocumentData): UserProfi
     email: data.email,
     role: data.role,
     disabled: data.disabled ?? false,
+    // Accounts created before this field existed predate the approval
+    // gate entirely — treat them as already approved rather than locking
+    // out every admin and volunteer the first time this deploys.
+    approved: data.approved ?? true,
     createdAt: data.createdAt,
     createdBy: data.createdBy,
     lastLoginAt: data.lastLoginAt ?? null,
@@ -42,6 +46,8 @@ export interface CreateUserInput {
  * Admin-created account. The 6-digit PIN is relayed to the volunteer over
  * WhatsApp and shown once — it is this account's Firebase Auth password,
  * chosen for the length purely because 6 digits is Firebase's own minimum.
+ * Approved immediately: an admin creating the account already is the
+ * approval, unlike the self-registration path below.
  */
 export async function createUser(
   input: CreateUserInput
@@ -64,6 +70,7 @@ export async function createUser(
     email: input.email,
     role: input.role,
     disabled: false,
+    approved: true,
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
     lastLoginAt: null,
@@ -74,13 +81,61 @@ export async function createUser(
   return { profile: toProfile(authUser.uid, record), pin };
 }
 
+export class EmailAlreadyRegisteredError extends Error {
+  constructor() {
+    super("That email address already has an account.");
+    this.name = "EmailAlreadyRegisteredError";
+  }
+}
+
+export interface SelfRegisterInput {
+  name: string;
+  mobile: string;
+  email: string;
+  pin: string;
+}
+
+/**
+ * A volunteer creates their own account and chooses their own PIN — but
+ * cannot sign in until an admin approves it (approved: false here). This is
+ * the PIN-based counterpart to Google's auto-provisioning in
+ * ensureUserProfile(); both land in the same pending state.
+ */
+export async function selfRegisterWithPin(input: SelfRegisterInput): Promise<UserProfile> {
+  const authUser = await adminAuth
+    .createUser({ email: input.email, password: input.pin, displayName: input.name })
+    .catch((error) => {
+      if (error?.errorInfo?.code === "auth/email-already-exists") {
+        throw new EmailAlreadyRegisteredError();
+      }
+      throw error;
+    });
+
+  await adminAuth.setCustomUserClaims(authUser.uid, { role: "volunteer" });
+
+  const record = {
+    name: input.name,
+    mobile: input.mobile,
+    email: input.email,
+    role: "volunteer" as UserRole,
+    disabled: false,
+    approved: false,
+    createdAt: new Date().toISOString(),
+    createdBy: "self-signup",
+    lastLoginAt: null,
+  };
+
+  await users().doc(authUser.uid).set(record);
+  return toProfile(authUser.uid, record);
+}
+
 /**
  * Google sign-in auto-provisions a QIDMA account on first login — there is
  * no admin step first. Idempotent: returns the existing profile untouched if
  * one is already there (e.g. an admin-created account signing in via Google
  * for the first time links to the same profile rather than duplicating it).
- * New accounts default to the least-privileged role; an admin promotes from
- * the Volunteers screen.
+ * New accounts default to the least-privileged role and are unapproved,
+ * same as PIN self-registration — an admin still has to let them in.
  */
 export async function ensureUserProfile(
   uid: string,
@@ -96,6 +151,7 @@ export async function ensureUserProfile(
     email: fallback.email,
     role: "volunteer" as UserRole,
     disabled: false,
+    approved: false,
     createdAt: new Date().toISOString(),
     createdBy: "self-signup",
     lastLoginAt: null,
@@ -121,6 +177,11 @@ export async function setUserRole(uid: string, role: UserRole): Promise<void> {
   await adminAuth.setCustomUserClaims(uid, { role });
   await adminAuth.revokeRefreshTokens(uid);
   await users().doc(uid).update({ role });
+}
+
+/** Lets a self-registered account actually sign in. */
+export async function approveUser(uid: string): Promise<void> {
+  await users().doc(uid).update({ approved: true });
 }
 
 /**

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, MessageSquare, Plus, ShieldCheck, ShieldOff, Trash2, UserX } from "lucide-react";
+import { ArrowLeft, Loader2, MessageSquare, Plus, ShieldCheck, ShieldOff, Trash2, UserX, UserCheck, Clock } from "lucide-react";
 import { useCurrentUser } from "@/components/nav-context";
 import { useConfirm } from "@/components/use-confirm";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   createUserAction,
   setUserDisabledAction,
   setUserRoleAction,
+  approveUserAction,
   deleteUserAction,
 } from "@/app/actions/users";
 import type { UserProfile, UserRole } from "@/lib/types";
@@ -143,6 +144,18 @@ export default function VolunteersPage() {
     await loadUsers();
   };
 
+  const handleApprove = async (u: UserProfile) => {
+    setBusyUid(u.uid);
+    const res = await approveUserAction(u.uid);
+    setBusyUid(null);
+    if (!res.success) {
+      toast.error(res.error || "Could not approve the account.");
+      return;
+    }
+    toast.success(`${u.name} approved — they can now sign in`);
+    await loadUsers();
+  };
+
   const handleDelete = async (u: UserProfile) => {
     const ok = await confirm({
       title: "Permanently delete this account?",
@@ -162,6 +175,9 @@ export default function VolunteersPage() {
     toast.success(`${u.name}'s account was deleted`);
     await loadUsers();
   };
+
+  const pendingUsers = users.filter((u) => !u.approved);
+  const approvedUsers = users.filter((u) => u.approved);
 
   const shareUrl = created && created.mobile
     ? `https://wa.me/${created.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(
@@ -184,8 +200,9 @@ export default function VolunteersPage() {
       <div>
         <h2 className="text-xl font-extrabold tracking-tight text-teal-900 md:text-2xl">Volunteers</h2>
         <p className="text-xs text-muted-foreground">
-          Create accounts, promote administrators, and control who has access. People who sign in with Google
-          appear here automatically as volunteers the moment they first sign in.
+          Create accounts, promote administrators, and control who has access. People who sign up
+          themselves — with a PIN or with Google — land in Pending Approval below and can&apos;t sign
+          in until you approve them.
         </p>
       </div>
 
@@ -276,91 +293,141 @@ export default function VolunteersPage() {
         )}
       </div>
 
-      {/* User list */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          All Accounts ({users.length})
-        </h3>
-
-        {loadingUsers ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : users.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-muted p-8 text-center text-sm text-muted-foreground">
-            No accounts yet.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {users.map((u) => {
-              const isSelf = u.uid === user.uid;
-              const isBusy = busyUid === u.uid;
-              return (
-                <div
-                  key={u.uid}
-                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
-                    u.disabled ? "border-border bg-muted/30 opacity-70" : "border-border bg-card"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-bold text-foreground">{u.name}</span>
-                      {u.role === "admin" && (
-                        <Badge>
-                          <ShieldCheck className="h-3 w-3" />
-                          <span>Admin</span>
+      {loadingUsers ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          {/* Pending approval */}
+          {pendingUsers.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-amber-700">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Pending Approval ({pendingUsers.length})</span>
+              </h3>
+              <div className="space-y-2">
+                {pendingUsers.map((u) => (
+                  <div
+                    key={u.uid}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"
+                  >
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold text-foreground">{u.name}</span>
+                        <Badge variant="warning">
+                          <Clock className="h-3 w-3" />
+                          <span>Awaiting Approval</span>
                         </Badge>
-                      )}
-                      {u.disabled && (
-                        <Badge variant="neutral">
-                          <UserX className="h-3 w-3" />
-                          <span>Disabled</span>
-                        </Badge>
-                      )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {u.email} · {u.mobile ?? "no phone on file"}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {u.email} · {u.mobile ?? "no phone on file"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={() => handleApprove(u)} disabled={busyUid === u.uid}>
+                        <UserCheck />
+                        <span>Approve</span>
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(u)}
+                        disabled={busyUid === u.uid}
+                      >
+                        <Trash2 />
+                        <span>Reject</span>
+                      </Button>
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleRole(u)}
-                      disabled={isSelf || isBusy}
-                      title={isSelf ? "You cannot change your own role." : undefined}
+          {/* User list */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              All Accounts ({approvedUsers.length})
+            </h3>
+
+            {approvedUsers.length === 0 ? (
+              <p className="rounded-2xl border-2 border-dashed border-muted p-8 text-center text-sm text-muted-foreground">
+                No accounts yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {approvedUsers.map((u) => {
+                  const isSelf = u.uid === user.uid;
+                  const isBusy = busyUid === u.uid;
+                  return (
+                    <div
+                      key={u.uid}
+                      className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
+                        u.disabled ? "border-border bg-muted/30 opacity-70" : "border-border bg-card"
+                      }`}
                     >
-                      {u.role === "admin" ? <ShieldOff /> : <ShieldCheck />}
-                      <span>{u.role === "admin" ? "Remove Admin" : "Make Admin"}</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleDisabled(u)}
-                      disabled={isSelf || isBusy}
-                      title={isSelf ? "You cannot disable your own account." : undefined}
-                    >
-                      <UserX />
-                      <span>{u.disabled ? "Enable" : "Disable"}</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(u)}
-                      disabled={isSelf || isBusy}
-                      title={isSelf ? "You cannot delete your own account." : undefined}
-                    >
-                      <Trash2 />
-                      <span>Delete</span>
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-bold text-foreground">{u.name}</span>
+                          {u.role === "admin" && (
+                            <Badge>
+                              <ShieldCheck className="h-3 w-3" />
+                              <span>Admin</span>
+                            </Badge>
+                          )}
+                          {u.disabled && (
+                            <Badge variant="neutral">
+                              <UserX className="h-3 w-3" />
+                              <span>Disabled</span>
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {u.email} · {u.mobile ?? "no phone on file"}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleRole(u)}
+                          disabled={isSelf || isBusy}
+                          title={isSelf ? "You cannot change your own role." : undefined}
+                        >
+                          {u.role === "admin" ? <ShieldOff /> : <ShieldCheck />}
+                          <span>{u.role === "admin" ? "Remove Admin" : "Make Admin"}</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleDisabled(u)}
+                          disabled={isSelf || isBusy}
+                          title={isSelf ? "You cannot disable your own account." : undefined}
+                        >
+                          <UserX />
+                          <span>{u.disabled ? "Enable" : "Disable"}</span>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(u)}
+                          disabled={isSelf || isBusy}
+                          title={isSelf ? "You cannot delete your own account." : undefined}
+                        >
+                          <Trash2 />
+                          <span>Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
